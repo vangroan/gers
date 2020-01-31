@@ -10,3 +10,4 @@ edition = "2018"
 name = "gers_core"
 
 [dependencies]
+sfml = "0.15.1"
