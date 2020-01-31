@@ -14,7 +14,7 @@ fn say_hello() -> PyResult<()> {
 
 /// This module is a python module implemented in Rust.
 #[pymodule]
-fn core_mod(py: Python, m: &PyModule) -> PyResult<()> {
+fn gers(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(say_hello))?;
 
     Ok(())
