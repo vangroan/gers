@@ -18,3 +18,9 @@ features = ["extension-module"]
 
 [dependencies.gers_core]
 path = "../core"
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
