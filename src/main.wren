@@ -5,11 +5,15 @@ class Bootstrap {
     System.print("Window Configure")
     var config = WindowConf.new()
     config.set_size(1024, 768)
-    config.set_title("Title from bootstrap")
+    // config.set_title("Title from bootstrap")
     return config
   }
 
   static update(delta) {
-    System.print(delta)
+    // TODO: Some interesting stuff
+  }
+
+  static shutdown() {
+    System.write("Wren: Shutdown")
   }
 }
