@@ -31,7 +31,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let _wren_logger = root.new(o!("lang" => "Wren"));
     let mut vm = WrenBuilder::new()
         .with_module("window", |module| {
-            module.register::<window::WrenWindow>();
             module.register::<window::WrenWindowConfig>();
         })
         .build();
