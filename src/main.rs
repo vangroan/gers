@@ -1,20 +1,28 @@
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate slog;
-extern crate slog_term;
 extern crate slog_async;
+extern crate slog_term;
 
+use legion::World;
+use rust_wren::{
+    handle::{FnSymbolRef, WrenCallRef},
+    prelude::*,
+};
 use slog::Drain;
-use rust_wren::{prelude::*, handle::{FnSymbol, WrenCallRef}};
 use winit::{
-    event::{Event, WindowEvent, KeyboardInput, ElementState, VirtualKeyCode},
+    dpi::LogicalSize,
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
-    dpi::LogicalSize,
 };
 
-mod window;
+mod entity;
 mod util;
+mod window;
 
+use entity::WrenEntity;
 use window::WrenWindowConfig;
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
@@ -42,14 +50,26 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     vm.context(|ctx| {
         info!(logger, "Get window configuration");
 
-        let receiver = ctx.get_var("main", "Bootstrap").expect("Failed to lookup Bootstrap class");
-        let func = FnSymbol::compile(ctx, "window()");
+        let receiver = ctx
+            .get_var("main", "Bootstrap")
+            .expect("Failed to lookup Bootstrap class");
+        let func = FnSymbolRef::compile(ctx, "window()").unwrap();
         let call_ref = WrenCallRef::new(receiver, func);
 
-        window_conf = call_ref.call::<_, Option<WrenWindowConfig>>(ctx, ())
-            .unwrap()// TODO: Will be WrenResult in future
+        window_conf = call_ref
+            .call::<_, Option<WrenWindowConfig>>(ctx, ())
+            .unwrap() // TODO: Will be WrenResult in future
             .map(|c| c.borrow().clone());
     });
+
+    let mut world = World::default();
+    for _ in 0..10 {
+        let e = WrenEntity::create(&mut world);
+        if let Some(entry) = world.entry(e.entity) {
+            let tag = entry.get_component::<entity::Tag>().unwrap();
+            info!(logger, "{}", tag);
+        };
+    }
 
     {
         let conf = window_conf.unwrap_or_else(|| WrenWindowConfig::new());
@@ -59,7 +79,8 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         let window = WindowBuilder::new()
             .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]))
             .with_title(conf.title)
-            .build(&event_loop).unwrap();
+            .build(&event_loop)
+            .unwrap();
 
         event_loop.run(move |event, _, control_flow| {
             match event {
@@ -68,26 +89,23 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     window_id,
                 } if window_id == window.id() => match event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                    WindowEvent::KeyboardInput {
-                        input,
-                        ..
-                    } => {
-                        match input {
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            } => *control_flow = ControlFlow::Exit,
-                            _ => {}
-                        }
-                    }
+                    WindowEvent::KeyboardInput { input, .. } => match input {
+                        KeyboardInput {
+                            state: ElementState::Pressed,
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            ..
+                        } => *control_flow = ControlFlow::Exit,
+                        _ => {}
+                    },
                     _ => {}
-                }
+                },
                 Event::LoopDestroyed => {
                     debug!(logger, "Loop destroyed");
                     vm.context(|ctx| {
-                        let receiver = ctx.get_var("main", "Bootstrap").expect("Failed to lookup Bootstrap class");
-                        let func = FnSymbol::compile(ctx, "shutdown()");
+                        let receiver = ctx
+                            .get_var("main", "Bootstrap")
+                            .expect("Failed to lookup Bootstrap class");
+                        let func = FnSymbolRef::compile(ctx, "shutdown()").unwrap();
                         let call_ref = WrenCallRef::new(receiver, func);
                         call_ref.call::<_, ()>(ctx, ());
                     });
@@ -97,8 +115,10 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
 
             vm.context(|ctx| {
                 // TODO: Leak call handle so we can hang on to it and not lookup variables each frame.
-                let receiver = ctx.get_var("main", "Bootstrap").expect("Failed to lookup Bootstrap class");
-                let func = FnSymbol::compile(ctx, "update(_)");
+                let receiver = ctx
+                    .get_var("main", "Bootstrap")
+                    .expect("Failed to lookup Bootstrap class");
+                let func = FnSymbolRef::compile(ctx, "update(_)").unwrap();
                 let call_ref = WrenCallRef::new(receiver, func);
 
                 call_ref.call::<_, ()>(ctx, 16.0);

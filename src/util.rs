@@ -8,9 +8,15 @@ use std::env;
 
 pub fn crate_version() -> Version {
     Version {
-        major: env!("CARGO_PKG_VERSION_MAjOR").parse::<i32>().expect("Parse version major failed"),
-        minor: env!("CARGO_PKG_VERSION_MINOR").parse::<i32>().expect("Parse version minor failed"),
-        patch: env!("CARGO_PKG_VERSION_PATCH").parse::<i32>().expect("Parse version patch failed"),
+        major: env!("CARGO_PKG_VERSION_MAjOR")
+            .parse::<i32>()
+            .expect("Parse version major failed"),
+        minor: env!("CARGO_PKG_VERSION_MINOR")
+            .parse::<i32>()
+            .expect("Parse version minor failed"),
+        patch: env!("CARGO_PKG_VERSION_PATCH")
+            .parse::<i32>()
+            .expect("Parse version patch failed"),
         pre: env!("CARGO_PKG_VERSION_PRE").to_owned(),
         full: env!("CARGO_PKG_VERSION").to_owned(),
     }
