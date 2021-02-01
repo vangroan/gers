@@ -1,11 +1,5 @@
 use crate::util::crate_version;
 use rust_wren::prelude::*;
-use winit::{
-    dpi::LogicalSize,
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
-};
 
 #[wren_class(name = WindowConf)]
 #[derive(Debug, Clone)]

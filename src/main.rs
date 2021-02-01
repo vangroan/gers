@@ -1,11 +1,8 @@
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use legion::World;
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
@@ -15,14 +12,12 @@ use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
+    window::WindowBuilder,
 };
 
-mod entity;
 mod util;
 mod window;
 
-use entity::WrenEntity;
 use window::WrenWindowConfig;
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
@@ -35,12 +30,12 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let _scope_guard = slog_scope::set_global_logger(logger.clone());
     let _log_guard = slog_stdlog::init_with_level(log::Level::Debug).unwrap();
 
-    // TODO: Provide VM with custom write and error print handlers so we can have a Wren logger.
-    let _wren_logger = root.new(o!("lang" => "Wren"));
+    let wren_logger = root.new(o!("lang" => "Wren"));
     let mut vm = WrenBuilder::new()
         .with_module("window", |module| {
             module.register::<window::WrenWindowConfig>();
         })
+        .with_write_fn(move |msg| info!(wren_logger, "{}", msg))
         .build();
 
     vm.interpret("window", include_str!("window.wren"))?;
@@ -62,17 +57,8 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             .map(|c| c.borrow().clone());
     });
 
-    let mut world = World::default();
-    for _ in 0..10 {
-        let e = WrenEntity::create(&mut world);
-        if let Some(entry) = world.entry(e.entity) {
-            let tag = entry.get_component::<entity::Tag>().unwrap();
-            info!(logger, "{}", tag);
-        };
-    }
-
     {
-        let conf = window_conf.unwrap_or_else(|| WrenWindowConfig::new());
+        let conf = window_conf.unwrap_or_else(WrenWindowConfig::new);
         debug!(logger, "{:?}", conf);
 
         let event_loop = EventLoop::new();
@@ -89,14 +75,16 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     window_id,
                 } if window_id == window.id() => match event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                    WindowEvent::KeyboardInput { input, .. } => match input {
-                        KeyboardInput {
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let KeyboardInput {
                             state: ElementState::Pressed,
                             virtual_keycode: Some(VirtualKeyCode::Escape),
                             ..
-                        } => *control_flow = ControlFlow::Exit,
-                        _ => {}
-                    },
+                        } = input
+                        {
+                            *control_flow = ControlFlow::Exit;
+                        }
+                    }
                     _ => {}
                 },
                 Event::LoopDestroyed => {
@@ -125,6 +113,4 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             });
         });
     }
-
-    Ok(())
 }
