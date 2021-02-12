@@ -629,6 +629,8 @@ dependencies = [
  "legion",
  "log",
  "rust-wren",
+ "serde",
+ "serde_json",
  "slog",
  "slog-async",
  "slog-scope",
@@ -744,6 +746,12 @@ checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
 dependencies = [
  "either",
 ]
+
+[[package]]
+name = "itoa"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 
 [[package]]
 name = "jni-sys"
@@ -1272,8 +1280,8 @@ dependencies = [
 
 [[package]]
 name = "rust-wren"
-version = "0.10.1"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#3dff9b26472a583a5a6cca7ad2286ea2fe69da38"
+version = "0.11.0"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#8f1cf05f5fdf9879c03780823ed488d3672b730b"
 dependencies = [
  "backtrace",
  "bindgen",
@@ -1289,7 +1297,7 @@ dependencies = [
 [[package]]
 name = "rust_wren_derive"
 version = "0.5.0"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#3dff9b26472a583a5a6cca7ad2286ea2fe69da38"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#8f1cf05f5fdf9879c03780823ed488d3672b730b"
 dependencies = [
  "quote",
  "rust_wren_derive_backend",
@@ -1299,7 +1307,7 @@ dependencies = [
 [[package]]
 name = "rust_wren_derive_backend"
 version = "0.5.1"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#3dff9b26472a583a5a6cca7ad2286ea2fe69da38"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#8f1cf05f5fdf9879c03780823ed488d3672b730b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1329,6 +1337,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ryu"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+
+[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1354,6 +1368,31 @@ name = "serde"
 version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c64263859d87aa2eb554587e2d23183398d617427327cf2b3d0ed8c69e4800"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.118"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c84d3526699cd55261af4b941e4e725444df67aa4f9e6a3564f18030d12672df"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea1c6153794552ea7cf7cf63b1231a25de00ec90db326ba6264440fa08e31486"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+]
 
 [[package]]
 name = "shlex"
@@ -1770,6 +1809,7 @@ dependencies = [
  "parking_lot",
  "percent-encoding",
  "raw-window-handle",
+ "serde",
  "smithay-client-toolkit",
  "wayland-client",
  "winapi 0.3.9",
