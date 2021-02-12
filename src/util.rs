@@ -1,11 +1,5 @@
 use std::env;
 
-//CARGO_PKG_VERSION — The full version of your package.
-// CARGO_PKG_VERSION_MAJOR — The major version of your package.
-// CARGO_PKG_VERSION_MINOR — The minor version of your package.
-// CARGO_PKG_VERSION_PATCH — The patch version of your package.
-// CARGO_PKG_VERSION_PRE — The pre-release version of your package.
-
 pub fn crate_version() -> Version {
     Version {
         major: env!("CARGO_PKG_VERSION_MAjOR")

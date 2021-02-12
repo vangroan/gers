@@ -1,5 +1,5 @@
 import "game" for Game
-import "input" for KeyboardInput
+import "input" for Keyboard
 
 class MyGame is Game {
   construct new() {
@@ -7,34 +7,25 @@ class MyGame is Game {
   }
 
   init() {
-    KeyboardInput.subscribeChar {|char|
+    Keyboard.subscribeChar {|char|
       System.print("Character subscriber %(char)")
     }
   }
 
   update() {
-    // System.print("update")
-    // while (poll()) {
-    //   System.print(event())
-    // }
-
-    for (event in events) {
-      System.print(event)
-    }
-
-    if (KeyboardInput.isKeyPressed("W")) {
+    if (Keyboard.isKeyPressed("W")) {
       System.print("UP")
     }
 
-    if (KeyboardInput.isKeyPressed("S")) {
+    if (Keyboard.isKeyPressed("S")) {
       System.print("DOWN")
     }
 
-    if (KeyboardInput.isKeyPressed("A")) {
+    if (Keyboard.isKeyPressed("A")) {
       System.print("LEFT")
     }
 
-    if (KeyboardInput.isKeyPressed("D")) {
+    if (Keyboard.isKeyPressed("D")) {
       System.print("RIGHT")
     }
   }

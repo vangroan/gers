@@ -8,7 +8,7 @@ use rust_wren::{
     prelude::*,
 };
 use slog::Drain;
-use std::{cell::RefCell, collections::VecDeque, env, fs, io::prelude::*, path::Path, rc::Rc};
+use std::{env, fs, path::Path};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -20,14 +20,11 @@ mod input;
 mod util;
 mod window;
 
-use rust_wren::handle::WrenHandle;
 use window::WrenWindowConfig;
 
 struct Game {
     init: WrenCallHandle,
     update: WrenCallHandle,
-    push_event: WrenCallHandle,
-    clear_events: WrenCallHandle,
     keyboard: input::Keyboard,
 }
 
@@ -47,9 +44,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let mut vm = WrenBuilder::new()
         .with_module("window", |module| {
             module.register::<window::WrenWindowConfig>();
-        })
-        .with_module("input", |module| {
-            module.register::<input::WrenInput>();
         })
         .with_write_fn(move |msg| {
             if msg != "\n" {
@@ -103,13 +97,13 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         vm.context(|ctx| {
             // FIXME: If function does not exist, the error is incorrect slot count.
             let get_handler = ctx.make_call_ref("game", "Game", "handler_").unwrap();
-            println!("Slot count {}", ctx.slot_count());
-            ctx.ensure_slots(10);
-            println!("Slot count {}", ctx.slot_count());
-            let undef = ctx.make_call_ref("game", "Game", "undefined").unwrap();
-            println!("Slot type {:?}", ctx.slot_type(0));
-            let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-            println!("Update ref");
+            // println!("Slot count {}", ctx.slot_count());
+            // ctx.ensure_slots(10);
+            // println!("Slot count {}", ctx.slot_count());
+            // let undef = ctx.make_call_ref("game", "Game", "undefined").unwrap();
+            // println!("Slot type {:?}", ctx.slot_type(0));
+            // let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
+            // println!("Update ref");
 
             // Init
             let init = {
@@ -119,33 +113,26 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             };
 
             // Update
-            let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
-            let update = WrenCallRef::new(handler, update_ref).leak().unwrap();
+            let update = {
+                let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
+                let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
+                WrenCallRef::new(handler, update_ref).leak().unwrap()
+            };
 
             // Keyboard Input (static scoped)
-            let push_event = ctx
-                .make_call_ref("game", "Game", "push_event_(_)")
-                .unwrap()
-                .leak()
-                .unwrap();
-            let clear_events = ctx
-                .make_call_ref("game", "Game", "clear_events_()")
-                .unwrap()
-                .leak()
-                .unwrap();
             let keyboard = input::Keyboard {
                 set_key_press: ctx
-                    .make_call_ref("input", "KeyboardInput", "setKeyPress_(_)")
+                    .make_call_ref("input", "Keyboard", "setKeyPress_(_)")
                     .unwrap()
                     .leak()
                     .unwrap(),
                 set_key_release: ctx
-                    .make_call_ref("input", "KeyboardInput", "setKeyRelease_(_)")
+                    .make_call_ref("input", "Keyboard", "setKeyRelease_(_)")
                     .unwrap()
                     .leak()
                     .unwrap(),
                 push_char: ctx
-                    .make_call_ref("input", "KeyboardInput", "pushChar_(_)")
+                    .make_call_ref("input", "Keyboard", "pushChar_(_)")
                     .unwrap()
                     .leak()
                     .unwrap(),
@@ -154,8 +141,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             maybe_game = Some(Game {
                 init,
                 update,
-                push_event,
-                clear_events,
                 keyboard,
             });
         });
@@ -187,66 +172,42 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                 Event::WindowEvent {
                     ref event,
                     window_id,
-                } if window_id == window.id() => {
-                    match event {
-                        WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                        WindowEvent::ReceivedCharacter(c) => {
-                            info!(logger, "ReceivedCharacter({})", c);
-                            if let Some(game) = &mut game {
-                                vm.context(|ctx| {
-                                    game.keyboard.push_char(ctx, *c).unwrap();
-                                });
-                            }
+                } if window_id == window.id() => match event {
+                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                    WindowEvent::ReceivedCharacter(c) => {
+                        info!(logger, "ReceivedCharacter({})", c);
+                        if let Some(game) = &mut game {
+                            vm.context(|ctx| {
+                                game.keyboard.push_char(ctx, *c).unwrap();
+                            });
                         }
-                        WindowEvent::KeyboardInput { input, .. } => {
-                            // println!(
-                            //     "Serialized: {} {} {}",
-                            //     input.scancode,
-                            //     serde_json::to_string(&input.virtual_keycode).unwrap(),
-                            //     serde_json::to_string(&input.state).unwrap(),
-                            // );
-                            // println!(
-                            //     "Deserialized: {:?} {:?}",
-                            //     serde_json::from_str::<winit::event::VirtualKeyCode>("\"W\""),
-                            //     serde_json::from_str::<winit::event::ElementState>("\"Pressed\"")
-                            // );
-
-                            if let Some(game) = &mut game {
-                                if let Some(virtual_keycode) = input.virtual_keycode {
-                                    vm.context(|ctx| {
-                                        game.push_event
-                                            .call::<_, ()>(ctx, format!("{:?}", virtual_keycode));
-
-                                        game.keyboard
-                                            .set_key_state(
-                                                ctx,
-                                                virtual_keycode,
-                                                input.state.clone(),
-                                            )
-                                            .unwrap();
-                                    });
-                                };
-                            };
-
-                            match input {
-                                KeyboardInput {
-                                    state: ElementState::Pressed,
-                                    virtual_keycode: Some(VirtualKeyCode::Escape),
-                                    ..
-                                } => {
-                                    *control_flow = ControlFlow::Exit;
-                                }
-                                _ => {}
-                            }
-                        }
-                        _ => {}
                     }
-                }
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let Some(game) = &mut game {
+                            if let Some(virtual_keycode) = input.virtual_keycode {
+                                vm.context(|ctx| {
+                                    game.keyboard
+                                        .set_key_state(ctx, virtual_keycode, input.state)
+                                        .unwrap();
+                                });
+                            };
+                        };
+
+                        if let KeyboardInput {
+                            state: ElementState::Pressed,
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            ..
+                        } = input
+                        {
+                            *control_flow = ControlFlow::Exit;
+                        }
+                    }
+                    _ => {}
+                },
                 Event::MainEventsCleared => {
                     if let Some(game) = &game {
                         vm.context(|ctx| {
                             game.update.call::<_, ()>(ctx, ()).unwrap();
-                            game.clear_events.call::<_, ()>(ctx, ()).unwrap();
                         });
                     };
                 }
@@ -268,17 +229,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                 }
                 _ => {}
             }
-
-            // vm.context(|ctx| {
-            //     // TODO: Leak call handle so we can hang on to it and not lookup variables each frame.
-            //     let receiver = ctx
-            //         .get_var("main", "Bootstrap")
-            //         .expect("Failed to lookup Bootstrap class");
-            //     let func = FnSymbolRef::compile(ctx, "update(_)").unwrap();
-            //     let call_ref = WrenCallRef::new(receiver, func);
-            //
-            //     call_ref.call::<_, ()>(ctx, 16.0);
-            // });
         });
     }
 }

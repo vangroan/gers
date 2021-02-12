@@ -1,13 +1,16 @@
 
-foreign class Input {
-  construct new() {}
 
-  foreign isPressed(keycode)
-}
-
-class KeyboardInput {
+class Keyboard {
   // Subscribes the given function to receive
   // keyboard events as UTF-8 characters.
+  //
+  // # Example
+  //
+  // ```
+  // Keyboard.subscribeChar {|char|
+  //   System.print(char)
+  // }
+  // ```
   static subscribeChar(fn) {
     ensure_()
 
@@ -26,6 +29,8 @@ class KeyboardInput {
   }
 
   // Call subscribers with queued characters.
+  //
+  // Drains the character queue.
   static emitChars() {
     for (sub in __subs) {
       for (char in __chars) {
@@ -74,10 +79,12 @@ class KeyboardInput {
     }
   }
 
+  // Clears the keyboard state for the next frame.
+  //
   // *Called from foreign*
   static clear_() {
     __state.clear()
   }
 }
 
-KeyboardInput.ensure_()
+Keyboard.ensure_()
