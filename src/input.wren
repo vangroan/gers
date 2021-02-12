@@ -1,5 +1,31 @@
 
 
+class Mouse {
+  static logicalX { __logicalX }
+  static logicalY { __logicalY }
+  static physicalX { __physicalX }
+  static physicalY { __physicalY }
+
+  // Initialise the mouse state.
+  static init_() {
+    __state = {}
+    __logicalX = 0.0
+    __logicalY = 0.0
+    __physicalX = 0.0
+    __physicalY = 0.0
+  }
+
+  static setPos_(lx, ly, px, py) {
+    __logicalX = lx
+    __logicalY = ly
+    __physicalX = px
+    __physicalY = py
+  }
+}
+
+Mouse.init_()
+
+
 class Keyboard {
   // Subscribes the given function to receive
   // keyboard events as UTF-8 characters.

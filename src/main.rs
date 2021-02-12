@@ -8,7 +8,7 @@ use rust_wren::{
     prelude::*,
 };
 use slog::Drain;
-use std::{env, fs, path::Path};
+use std::{env, fs, path::Path, time::Instant};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -23,8 +23,11 @@ mod window;
 use window::WrenWindowConfig;
 
 struct Game {
+    dpi: f64,
+    set_delta_time: WrenCallHandle,
     init: WrenCallHandle,
     update: WrenCallHandle,
+    mouse: input::Mouse,
     keyboard: input::Keyboard,
 }
 
@@ -105,6 +108,13 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             // let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
             // println!("Update ref");
 
+            // Delta Time
+            let set_delta_time = ctx
+                .make_call_ref("game", "Game", "deltaTime_=(_)")
+                .unwrap()
+                .leak()
+                .unwrap();
+
             // Init
             let init = {
                 let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
@@ -117,6 +127,15 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                 let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
                 let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
                 WrenCallRef::new(handler, update_ref).leak().unwrap()
+            };
+
+            // Mouse Input
+            let mouse = input::Mouse {
+                set_pos: ctx
+                    .make_call_ref("input", "Mouse", "setPos_(_,_,_,_)")
+                    .unwrap()
+                    .leak()
+                    .unwrap(),
             };
 
             // Keyboard Input (static scoped)
@@ -139,8 +158,11 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             };
 
             maybe_game = Some(Game {
+                dpi: 1.0,
+                set_delta_time,
                 init,
                 update,
+                mouse,
                 keyboard,
             });
         });
@@ -165,6 +187,8 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             });
         };
 
+        let mut last_time = Instant::now();
+
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
 
@@ -174,11 +198,24 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     window_id,
                 } if window_id == window.id() => match event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                    WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                        if let Some(game) = &mut game {
+                            game.dpi = *scale_factor;
+                        }
+                    }
                     WindowEvent::ReceivedCharacter(c) => {
                         info!(logger, "ReceivedCharacter({})", c);
                         if let Some(game) = &mut game {
                             vm.context(|ctx| {
                                 game.keyboard.push_char(ctx, *c).unwrap();
+                            });
+                        }
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        if let Some(game) = &mut game {
+                            vm.context(|ctx| {
+                                let logical = position.to_logical(game.dpi);
+                                game.mouse.set_pos(ctx, logical, *position).unwrap();
                             });
                         }
                     }
@@ -205,8 +242,16 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     _ => {}
                 },
                 Event::MainEventsCleared => {
+                    // Frame update after events have been flushed.
+                    let now = Instant::now();
+                    let delta_time = now - last_time;
+                    last_time = now;
+
                     if let Some(game) = &game {
                         vm.context(|ctx| {
+                            game.set_delta_time
+                                .call::<_, ()>(ctx, delta_time.as_secs_f64())
+                                .unwrap();
                             game.update.call::<_, ()>(ctx, ()).unwrap();
                         });
                     };

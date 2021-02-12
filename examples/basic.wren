@@ -1,9 +1,11 @@
 import "game" for Game
-import "input" for Keyboard
+import "input" for Keyboard, Mouse
 
 class MyGame is Game {
   construct new() {
     super.setup(this)
+
+    _timer = 0.0
   }
 
   init() {
@@ -13,6 +15,12 @@ class MyGame is Game {
   }
 
   update() {
+    _timer = _timer + Game.deltaTime
+    if (_timer > 1.0) {
+      System.print("%(Mouse.logicalX), %(Mouse.logicalY), %(Mouse.physicalX), %(Mouse.physicalY)")
+      _timer = 0.0
+    }
+
     if (Keyboard.isKeyPressed("W")) {
       System.print("UP")
     }

@@ -4,6 +4,9 @@ class Game {
   // Called by engine to get the entry point.
   static handler_ { __handler }
 
+  static deltaTime { __dt }
+  static deltaTime_=(dt) { __dt = dt  }
+
   static run(handler) {
     __handler = handler
   }
@@ -16,6 +19,9 @@ class Game {
 
     // Store the instantiated game object as a singleton.
     __handler = this
+
+    // Initialise delta time.
+    __dt = 0.16
   }
 
   // Override me

@@ -1,6 +1,25 @@
 use rust_wren::handle::WrenCallHandle;
 use rust_wren::WrenContext;
-use winit::event::{ElementState, VirtualKeyCode};
+use winit::{
+    dpi::{LogicalPosition, PhysicalPosition},
+    event::{ElementState, VirtualKeyCode},
+};
+
+pub struct Mouse {
+    pub set_pos: WrenCallHandle,
+}
+
+impl Mouse {
+    pub fn set_pos(
+        &mut self,
+        ctx: &mut WrenContext,
+        logical: LogicalPosition<f64>,
+        physical: PhysicalPosition<f64>,
+    ) -> Option<()> {
+        self.set_pos
+            .call::<_, ()>(ctx, (logical.x, logical.y, physical.x, physical.y))
+    }
+}
 
 pub struct Keyboard {
     pub set_key_press: WrenCallHandle,
