@@ -16,20 +16,14 @@ use winit::{
     window::WindowBuilder,
 };
 
+mod game;
+mod graphics;
 mod input;
 mod util;
 mod window;
 
-use window::WrenWindowConfig;
-
-struct Game {
-    dpi: f64,
-    set_delta_time: WrenCallHandle,
-    init: WrenCallHandle,
-    update: WrenCallHandle,
-    mouse: input::Mouse,
-    keyboard: input::Keyboard,
-}
+use self::game::{init_game, register_game, Game};
+use self::window::WrenWindowConfig;
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Logging
@@ -59,7 +53,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     vm.interpret("window", include_str!("window.wren"))?;
     vm.interpret("input", include_str!("input.wren"))?;
     vm.interpret("main", include_str!("main.wren"))?;
-    vm.interpret("game", include_str!("game.wren"))?;
+    register_game(&mut vm)?;
 
     // Validate the entry point exists
     let args: Vec<String> = env::args().collect();
@@ -91,6 +85,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
 
     let mut game = {
         // In block so source is dropped when loading is done.
+        // It's copied into Wren so no need to keep it in memory.
         let source = fs::read_to_string(entry_path)?;
         vm.interpret("core", &source)?;
 
@@ -98,75 +93,8 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         //       https://gitlab.com/vangroan/rust-wren/-/issues/12
         let mut maybe_game: Option<Game> = None;
         vm.context(|ctx| {
-            // FIXME: If function does not exist, the error is incorrect slot count.
-            let get_handler = ctx.make_call_ref("game", "Game", "handler_").unwrap();
-            // println!("Slot count {}", ctx.slot_count());
-            // ctx.ensure_slots(10);
-            // println!("Slot count {}", ctx.slot_count());
-            // let undef = ctx.make_call_ref("game", "Game", "undefined").unwrap();
-            // println!("Slot type {:?}", ctx.slot_type(0));
-            // let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-            // println!("Update ref");
-
-            // Delta Time
-            let set_delta_time = ctx
-                .make_call_ref("game", "Game", "deltaTime_=(_)")
-                .unwrap()
-                .leak()
-                .unwrap();
-
-            // Init
-            let init = {
-                let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-                let init_ref = FnSymbolRef::compile(ctx, "init()").unwrap();
-                WrenCallRef::new(handler, init_ref).leak().unwrap()
-            };
-
-            // Update
-            let update = {
-                let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-                let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
-                WrenCallRef::new(handler, update_ref).leak().unwrap()
-            };
-
-            // Mouse Input
-            let mouse = input::Mouse {
-                set_pos: ctx
-                    .make_call_ref("input", "Mouse", "setPos_(_,_,_,_)")
-                    .unwrap()
-                    .leak()
-                    .unwrap(),
-            };
-
-            // Keyboard Input (static scoped)
-            let keyboard = input::Keyboard {
-                set_key_press: ctx
-                    .make_call_ref("input", "Keyboard", "setKeyPress_(_)")
-                    .unwrap()
-                    .leak()
-                    .unwrap(),
-                set_key_release: ctx
-                    .make_call_ref("input", "Keyboard", "setKeyRelease_(_)")
-                    .unwrap()
-                    .leak()
-                    .unwrap(),
-                push_char: ctx
-                    .make_call_ref("input", "Keyboard", "pushChar_(_)")
-                    .unwrap()
-                    .leak()
-                    .unwrap(),
-            };
-
-            maybe_game = Some(Game {
-                dpi: 1.0,
-                set_delta_time,
-                init,
-                update,
-                mouse,
-                keyboard,
-            });
+            maybe_game = Some(init_game(ctx));
         });
-
         maybe_game
     };
 
@@ -200,7 +128,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                         if let Some(game) = &mut game {
-                            game.dpi = *scale_factor;
+                            game.scale_factor = *scale_factor;
                         }
                     }
                     WindowEvent::ReceivedCharacter(c) => {
@@ -214,7 +142,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                     WindowEvent::CursorMoved { position, .. } => {
                         if let Some(game) = &mut game {
                             vm.context(|ctx| {
-                                let logical = position.to_logical(game.dpi);
+                                let logical = position.to_logical(game.scale_factor);
                                 game.mouse.set_pos(ctx, logical, *position).unwrap();
                             });
                         }
