@@ -3,8 +3,9 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use std::{env, fs, path::Path};
+use std::{env, fs, path::Path, process};
 
+use self::errors::GersError;
 use self::game::{init_game, register_game, Game};
 use self::window::WrenWindowConfig;
 use rust_wren::{
@@ -53,6 +54,11 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
 
     // Validate the entry point exists
     let args: Vec<String> = env::args().collect();
+    if args.len() <= 1 {
+        error!(logger, "Specify an entry point script.");
+        return Err(GersError::InvalidCmdArgs.into());
+    }
+
     let script_entry = args[1].as_str();
     info!(logger, "Entry point: {}", script_entry);
     let entry_path = Path::new(script_entry);
