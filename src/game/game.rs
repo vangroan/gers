@@ -137,7 +137,7 @@ impl Game {
     ///
     /// VM is borrowed so that it's dropped after the `Game`, which
     /// contains handles that need to be released first.
-    pub fn run(mut self, vm: &'_ mut WrenVm, mut event_loop: EventLoop<()>) -> GersResult<()> {
+    pub fn run(mut self, vm: &mut WrenVm, mut event_loop: EventLoop<()>) -> GersResult<()> {
         // Initialisation hook.
         //
         // After Window has been initialised, before event loop starts.
