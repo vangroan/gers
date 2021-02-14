@@ -25,6 +25,8 @@ class MyGame is Game {
       _timer = 0.0
     }
 
+    // System.print("delta time %(Game.deltaTime)")
+
     if (Keyboard.isKeyPressed("W")) {
       System.print("UP")
     }

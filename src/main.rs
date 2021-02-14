@@ -3,12 +3,16 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
+use std::{env, fs, path::Path, time::Instant};
+
+use self::game::{init_game, register_game, FpsCounter, FpsThrottle, FpsThrottlePolicy, Game};
+use self::window::WrenWindowConfig;
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallHandle, WrenCallRef},
     prelude::*,
 };
 use slog::Drain;
-use std::{env, fs, path::Path, time::Instant};
+use std::time::Duration;
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -21,9 +25,6 @@ mod graphics;
 mod input;
 mod util;
 mod window;
-
-use self::game::{init_game, register_game, Game};
-use self::window::WrenWindowConfig;
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Logging
@@ -105,7 +106,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]))
-            .with_title(conf.title)
+            .with_title(conf.title.clone())
             .build(&event_loop)
             .unwrap();
 
@@ -115,7 +116,12 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             });
         };
 
+        let mut fps_throttle = FpsThrottle::new(60, FpsThrottlePolicy::Yield);
+        let mut fps_counter = FpsCounter::new();
+        // Time at which delta time is calculated.
+        // Also serves as the mark where one frame ends and the next frame starts.
         let mut last_time = Instant::now();
+        let mut delta_time = Duration::from_millis(16);
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
@@ -132,7 +138,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                         }
                     }
                     WindowEvent::ReceivedCharacter(c) => {
-                        info!(logger, "ReceivedCharacter({})", c);
                         if let Some(game) = &mut game {
                             vm.context(|ctx| {
                                 game.keyboard.push_char(ctx, *c).unwrap();
@@ -178,10 +183,6 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                 },
                 Event::MainEventsCleared => {
                     // Frame update after events have been flushed.
-                    let now = Instant::now();
-                    let delta_time = now - last_time;
-                    last_time = now;
-
                     if let Some(game) = &game {
                         vm.context(|ctx| {
                             game.set_delta_time
@@ -190,6 +191,18 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                             game.update.call::<_, ()>(ctx, ()).unwrap();
                         });
                     };
+
+                    window.set_title(&format!("{} - {:.2} FPS", conf.title, fps_counter.fps()));
+
+                    // Fill up the rest of the frame so we can hit the target FPS.
+                    fps_throttle.throttle(last_time);
+
+                    // Barrier where this frame ends.
+                    let now = Instant::now();
+                    delta_time = now - last_time;
+                    last_time = now;
+
+                    fps_counter.add(delta_time);
                 }
                 Event::LoopDestroyed => {
                     debug!(logger, "Loop destroyed");
