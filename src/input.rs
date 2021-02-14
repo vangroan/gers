@@ -21,12 +21,7 @@ impl Mouse {
             .call::<_, ()>(ctx, (logical.x, logical.y, physical.x, physical.y))
     }
 
-    pub fn push_button(
-        &mut self,
-        ctx: &mut WrenContext,
-        button: MouseButton,
-        state: ElementState,
-    ) -> Option<()> {
+    pub fn push_button(&mut self, ctx: &mut WrenContext, button: MouseButton, state: ElementState) -> Option<()> {
         // TODO: Do one of these 3 overlap with possible `Other(_)` values?
         let button_id = match button {
             MouseButton::Left => 1,
@@ -49,19 +44,10 @@ pub struct Keyboard {
 }
 
 impl Keyboard {
-    pub fn set_key_state(
-        &mut self,
-        ctx: &mut WrenContext,
-        keycode: VirtualKeyCode,
-        state: ElementState,
-    ) -> Option<()> {
+    pub fn set_key_state(&mut self, ctx: &mut WrenContext, keycode: VirtualKeyCode, state: ElementState) -> Option<()> {
         match state {
-            ElementState::Pressed => self
-                .set_key_press
-                .call::<_, ()>(ctx, format!("{:?}", keycode)),
-            ElementState::Released => self
-                .set_key_release
-                .call::<_, ()>(ctx, format!("{:?}", keycode)),
+            ElementState::Pressed => self.set_key_press.call::<_, ()>(ctx, format!("{:?}", keycode)),
+            ElementState::Released => self.set_key_release.call::<_, ()>(ctx, format!("{:?}", keycode)),
         }
     }
 

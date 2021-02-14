@@ -3,23 +3,18 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use std::{env, fs, path::Path, time::Instant};
+use std::{env, fs, path::Path};
 
-use self::game::{init_game, register_game, FpsCounter, FpsThrottle, FpsThrottlePolicy, Game};
+use self::game::{init_game, register_game, Game};
 use self::window::WrenWindowConfig;
 use rust_wren::{
-    handle::{FnSymbolRef, WrenCallHandle, WrenCallRef},
+    handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
 };
 use slog::Drain;
-use std::time::Duration;
-use winit::{
-    dpi::LogicalSize,
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
+use winit::{dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder};
 
+mod errors;
 mod game;
 mod graphics;
 mod input;
@@ -94,134 +89,22 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         //       https://gitlab.com/vangroan/rust-wren/-/issues/12
         let mut maybe_game: Option<Game> = None;
         vm.context(|ctx| {
-            maybe_game = Some(init_game(ctx));
+            maybe_game = Some(init_game(ctx, logger.clone()));
         });
-        maybe_game
+        maybe_game.unwrap()
     };
 
-    {
-        let conf = window_conf.unwrap_or_else(WrenWindowConfig::new);
-        debug!(logger, "{:?}", conf);
+    let conf = window_conf.unwrap_or_else(WrenWindowConfig::new);
+    debug!(logger, "{:?}", conf);
 
-        let event_loop = EventLoop::new();
-        let window = WindowBuilder::new()
-            .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]))
-            .with_title(conf.title.clone())
-            .build(&event_loop)
-            .unwrap();
+    let event_loop = EventLoop::new();
+    let window = WindowBuilder::new()
+        .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]))
+        .with_title(conf.title.clone())
+        .build(&event_loop)?;
 
-        if let Some(game) = &game {
-            vm.context(|ctx| {
-                game.init.call::<_, ()>(ctx, ()).unwrap();
-            });
-        };
+    game.window_conf = conf;
+    game.run(&mut vm, event_loop, window)?;
 
-        let mut fps_throttle = FpsThrottle::new(60, FpsThrottlePolicy::Yield);
-        let mut fps_counter = FpsCounter::new();
-        // Time at which delta time is calculated.
-        // Also serves as the mark where one frame ends and the next frame starts.
-        let mut last_time = Instant::now();
-        let mut delta_time = Duration::from_millis(16);
-
-        event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
-
-            match event {
-                Event::WindowEvent {
-                    ref event,
-                    window_id,
-                } if window_id == window.id() => match event {
-                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                    WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                        if let Some(game) = &mut game {
-                            game.scale_factor = *scale_factor;
-                        }
-                    }
-                    WindowEvent::ReceivedCharacter(c) => {
-                        if let Some(game) = &mut game {
-                            vm.context(|ctx| {
-                                game.keyboard.push_char(ctx, *c).unwrap();
-                            });
-                        }
-                    }
-                    WindowEvent::MouseInput { button, state, .. } => {
-                        if let Some(game) = &mut game {
-                            vm.context(|ctx| {
-                                game.mouse.push_button(ctx, *button, *state).unwrap();
-                            });
-                        }
-                    }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        if let Some(game) = &mut game {
-                            vm.context(|ctx| {
-                                let logical = position.to_logical(game.scale_factor);
-                                game.mouse.set_pos(ctx, logical, *position).unwrap();
-                            });
-                        }
-                    }
-                    WindowEvent::KeyboardInput { input, .. } => {
-                        if let Some(game) = &mut game {
-                            if let Some(virtual_keycode) = input.virtual_keycode {
-                                vm.context(|ctx| {
-                                    game.keyboard
-                                        .set_key_state(ctx, virtual_keycode, input.state)
-                                        .unwrap();
-                                });
-                            };
-                        };
-
-                        if let KeyboardInput {
-                            state: ElementState::Pressed,
-                            virtual_keycode: Some(VirtualKeyCode::Escape),
-                            ..
-                        } = input
-                        {
-                            *control_flow = ControlFlow::Exit;
-                        }
-                    }
-                    _ => {}
-                },
-                Event::MainEventsCleared => {
-                    // Frame update after events have been flushed.
-                    if let Some(game) = &game {
-                        vm.context(|ctx| {
-                            game.set_delta_time
-                                .call::<_, ()>(ctx, delta_time.as_secs_f64())
-                                .unwrap();
-                            game.update.call::<_, ()>(ctx, ()).unwrap();
-                        });
-                    };
-
-                    window.set_title(&format!("{} - {:.2} FPS", conf.title, fps_counter.fps()));
-
-                    // Fill up the rest of the frame so we can hit the target FPS.
-                    fps_throttle.throttle(last_time);
-
-                    // Barrier where this frame ends.
-                    let now = Instant::now();
-                    delta_time = now - last_time;
-                    last_time = now;
-
-                    fps_counter.add(delta_time);
-                }
-                Event::LoopDestroyed => {
-                    debug!(logger, "Loop destroyed");
-                    vm.context(|ctx| {
-                        let receiver = ctx
-                            .get_var("main", "Bootstrap")
-                            .expect("Failed to lookup Bootstrap class");
-                        let func = FnSymbolRef::compile(ctx, "shutdown()").unwrap();
-                        let call_ref = WrenCallRef::new(receiver, func);
-                        call_ref.call::<_, ()>(ctx, ());
-                    });
-
-                    // Release reference before VM is dropped.
-                    if let Some(game) = game.take() {
-                        drop(game);
-                    };
-                }
-                _ => {}
-            }
-        });
-    }
+    Ok(())
 }
