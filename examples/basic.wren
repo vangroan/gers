@@ -45,6 +45,10 @@ class MyGame is Game {
       System.print("MOUSE LEFT")
     }
   }
+
+  draw() {
+    // TODO
+  }
 }
 
 Game.run(MyGame.new())

@@ -30,6 +30,9 @@ class Game {
   // Override me
   update() {}
 
+  // Override me
+  draw() {}
+
   // Per frame update
   process_() {
     update()

@@ -7,18 +7,22 @@ use std::{env, fs, path::Path, process};
 
 use self::errors::GersError;
 use self::game::{init_game, register_game, Game};
+use self::graphics::GraphicDevice;
 use self::window::WrenWindowConfig;
+use glutin::{
+    dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest,
+};
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
 };
 use slog::Drain;
-use winit::{dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder};
 
 mod errors;
 mod game;
 mod graphics;
 mod input;
+mod marker;
 mod util;
 mod window;
 
@@ -85,6 +89,22 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
             .map(|c| c.borrow().clone());
     });
 
+    let conf = window_conf.unwrap_or_else(WrenWindowConfig::new);
+    debug!(logger, "{:?}", conf);
+
+    // Create OpenGL context from window.
+    let event_loop = glutin::event_loop::EventLoop::new();
+    let wb = WindowBuilder::new()
+        .with_title(conf.title.clone())
+        .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]));
+    let windowed_context = ContextBuilder::new()
+        .with_vsync(false)
+        .with_gl(GlRequest::Specific(Api::OpenGl, (4, 5)))
+        .with_gl_profile(GlProfile::Core)
+        .build_windowed(wb, &event_loop)?;
+    let windowed_context = unsafe { windowed_context.make_current().unwrap() };
+    let device = unsafe { GraphicDevice::from_windowed_context(&windowed_context) };
+
     let mut game = {
         // In block so source is dropped when loading is done.
         // It's copied into Wren so no need to keep it in memory.
@@ -95,22 +115,13 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         //       https://gitlab.com/vangroan/rust-wren/-/issues/12
         let mut maybe_game: Option<Game> = None;
         vm.context(|ctx| {
-            maybe_game = Some(init_game(ctx, logger.clone()));
+            maybe_game = Some(init_game(ctx, logger.clone(), windowed_context, device));
         });
         maybe_game.unwrap()
     };
 
-    let conf = window_conf.unwrap_or_else(WrenWindowConfig::new);
-    debug!(logger, "{:?}", conf);
-
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(conf.size[0], conf.size[1]))
-        .with_title(conf.title.clone())
-        .build(&event_loop)?;
-
     game.window_conf = conf;
-    game.run(&mut vm, event_loop, window)?;
+    game.run(&mut vm, event_loop)?;
 
     Ok(())
 }

@@ -1,9 +1,17 @@
 //! Game script entrypoint and hooks.
 use super::{FpsCounter, FpsThrottle, FpsThrottlePolicy};
+use crate::graphics::GraphicDevice;
 use crate::{
     errors::GersResult,
     input::{Keyboard, Mouse},
     window::WrenWindowConfig,
+};
+use glutin::{
+    event::Event,
+    event_loop::{ControlFlow, EventLoop},
+    platform::run_return::EventLoopExtRunReturn,
+    window::Window,
+    PossiblyCurrent, WindowedContext,
 };
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallHandle, WrenCallRef},
@@ -12,14 +20,13 @@ use rust_wren::{
 };
 use slog::Logger;
 use std::time::{Duration, Instant};
-use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::{
-    event::Event,
-    event_loop::{ControlFlow, EventLoop},
-    window::Window,
-};
 
-pub fn init_game(ctx: &mut WrenContext, logger: Logger) -> Game {
+pub fn init_game(
+    ctx: &mut WrenContext,
+    logger: Logger,
+    windowed_context: WindowedContext<PossiblyCurrent>,
+    graphic_device: GraphicDevice,
+) -> Game {
     // TODO:
     //  Change signature to return WrenResult
     //  Change all unwraps to ?
@@ -47,6 +54,13 @@ pub fn init_game(ctx: &mut WrenContext, logger: Logger) -> Game {
         let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
         let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
         WrenCallRef::new(handler, update_ref).leak().unwrap()
+    };
+
+    // Update
+    let draw_handle = {
+        let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
+        let draw_ref = FnSymbolRef::compile(ctx, "draw()").unwrap();
+        WrenCallRef::new(handler, draw_ref).leak().unwrap()
     };
 
     // Mouse Input
@@ -85,10 +99,13 @@ pub fn init_game(ctx: &mut WrenContext, logger: Logger) -> Game {
     Game {
         logger,
         window_conf: WrenWindowConfig::new(),
+        windowed_context,
+        graphics: graphic_device,
         scale_factor: 1.0,
         set_delta_time,
         init,
         update,
+        draw_handle,
         mouse,
         keyboard,
     }
@@ -102,10 +119,13 @@ pub fn register_game(vm: &mut WrenVm) -> WrenResult<()> {
 pub struct Game {
     pub logger: Logger,
     pub window_conf: WrenWindowConfig,
+    pub windowed_context: WindowedContext<PossiblyCurrent>,
+    pub graphics: GraphicDevice,
     pub scale_factor: f64,
     pub set_delta_time: WrenCallHandle,
     pub init: WrenCallHandle,
     pub update: WrenCallHandle,
+    pub draw_handle: WrenCallHandle,
     pub mouse: Mouse,
     pub keyboard: Keyboard,
 }
@@ -117,7 +137,7 @@ impl Game {
     ///
     /// VM is borrowed so that it's dropped after the `Game`, which
     /// contains handles that need to be released first.
-    pub fn run(mut self, vm: &'_ mut WrenVm, mut event_loop: EventLoop<()>, mut window: Window) -> GersResult<()> {
+    pub fn run(mut self, vm: &'_ mut WrenVm, mut event_loop: EventLoop<()>) -> GersResult<()> {
         // Initialisation hook.
         //
         // After Window has been initialised, before event loop starts.
@@ -151,7 +171,6 @@ impl Game {
                 vm,
                 event,
                 control_flow,
-                window: &mut window,
 
                 last_time: &mut last_time,
                 delta_time: &mut delta_time,
@@ -177,7 +196,6 @@ impl Game {
             vm,
             event,
             control_flow,
-            window,
 
             last_time,
             delta_time,
@@ -196,59 +214,64 @@ impl Game {
                 fps_counter.add(*delta_time);
                 Ok(())
             }
-            E::WindowEvent { ref event, window_id } if window_id == window.id() => match event {
-                WE::CloseRequested => {
-                    *control_flow = ControlFlow::Exit;
-                    Ok(())
-                }
-                WE::Resized(_inner_size) => {
-                    // TODO: Resize windowed context when glutin openGL is in place.
-                    Ok(())
-                }
-                WE::ScaleFactorChanged { scale_factor, .. } => {
-                    self.scale_factor = *scale_factor;
-                    Ok(())
-                }
-                WE::MouseInput { button, state, .. } => {
-                    vm.context(|ctx| {
-                        self.mouse.push_button(ctx, *button, *state).unwrap();
-                    });
-                    Ok(())
-                }
-                WE::CursorMoved { position, .. } => {
-                    vm.context(|ctx| {
-                        let logical = position.to_logical(self.scale_factor);
-                        self.mouse.set_pos(ctx, logical, *position).unwrap();
-                    });
-                    Ok(())
-                }
-                WE::ReceivedCharacter(c) => {
-                    vm.context(|ctx| {
-                        self.keyboard.push_char(ctx, *c).unwrap();
-                    });
-                    Ok(())
-                }
-                WE::KeyboardInput { input, .. } => {
-                    if let Some(virtual_keycode) = input.virtual_keycode {
-                        vm.context(|ctx| {
-                            self.keyboard.set_key_state(ctx, virtual_keycode, input.state).unwrap();
-                        });
-                    };
-
-                    // TODO: Script should decide what to do with escape
-                    if let KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        ..
-                    } = input
-                    {
+            E::WindowEvent { ref event, window_id } if window_id == self.windowed_context.window().id() => {
+                match event {
+                    WE::CloseRequested => {
                         *control_flow = ControlFlow::Exit;
+                        Ok(())
                     }
+                    WE::Resized(inner_size) => {
+                        // Required on some platforms.
+                        self.windowed_context.resize(*inner_size);
 
-                    Ok(())
+                        self.graphics.set_viewport_size(*inner_size);
+                        Ok(())
+                    }
+                    WE::ScaleFactorChanged { scale_factor, .. } => {
+                        self.scale_factor = *scale_factor;
+                        Ok(())
+                    }
+                    WE::MouseInput { button, state, .. } => {
+                        vm.context(|ctx| {
+                            self.mouse.push_button(ctx, *button, *state).unwrap();
+                        });
+                        Ok(())
+                    }
+                    WE::CursorMoved { position, .. } => {
+                        vm.context(|ctx| {
+                            let logical = position.to_logical(self.scale_factor);
+                            self.mouse.set_pos(ctx, logical, *position).unwrap();
+                        });
+                        Ok(())
+                    }
+                    WE::ReceivedCharacter(c) => {
+                        vm.context(|ctx| {
+                            self.keyboard.push_char(ctx, *c).unwrap();
+                        });
+                        Ok(())
+                    }
+                    WE::KeyboardInput { input, .. } => {
+                        if let Some(virtual_keycode) = input.virtual_keycode {
+                            vm.context(|ctx| {
+                                self.keyboard.set_key_state(ctx, virtual_keycode, input.state).unwrap();
+                            });
+                        };
+
+                        // TODO: Script should decide what to do with escape
+                        if let KeyboardInput {
+                            state: ElementState::Pressed,
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            ..
+                        } = input
+                        {
+                            *control_flow = ControlFlow::Exit;
+                        }
+
+                        Ok(())
+                    }
+                    _ => Ok(()),
                 }
-                _ => Ok(()),
-            },
+            }
             E::MainEventsCleared => {
                 // Frame update after events have been flushed.
                 vm.context(|ctx| {
@@ -258,16 +281,28 @@ impl Game {
                     self.update.call::<_, ()>(ctx, ()).unwrap();
                 });
 
-                window.set_title(&format!("{} - {:.2} FPS", self.window_conf.title, fps_counter.fps()));
+                self.windowed_context.window().set_title(&format!(
+                    "{} - {:.2} FPS",
+                    self.window_conf.title,
+                    fps_counter.fps()
+                ));
 
                 // Emit redraw event for rendering. Integrates
                 // our render step with redraw requests from OS.
-                window.request_redraw();
+                self.windowed_context.window().request_redraw();
 
                 Ok(())
             }
             E::RedrawRequested(_window_id) => {
-                // TODO: When glutin and opengl are in.
+                self.graphics.clear_screen([0.1, 0.2, 0.3, 1.0]);
+
+                vm.context(|ctx| {
+                    self.draw_handle.call::<_, ()>(ctx, ()).unwrap();
+                });
+
+                // Display the drawn buffer in the window.
+                self.windowed_context.swap_buffers();
+
                 Ok(())
             }
             E::RedrawEventsCleared => {
@@ -299,7 +334,6 @@ struct FrameArgs<'a, 'b> {
     vm: &'a mut WrenVm,
     event: Event<'b, ()>,
     control_flow: &'a mut ControlFlow,
-    window: &'a mut Window,
 
     last_time: &'a mut Instant,
     delta_time: &'a mut Duration,
