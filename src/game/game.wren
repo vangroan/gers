@@ -1,4 +1,4 @@
-import "input" for Keyboard
+import "input" for Keyboard, Mouse
 
 class Game {
   // Called by engine to get the entry point.
@@ -34,6 +34,10 @@ class Game {
   process_() {
     update()
 
-    Keyboard.emitChars()
+    Keyboard.emitChars_()
+
+    // Keyboard events should be emitted first
+    // because of modifier keys. (Shift, Ctrl, Alt)
+    Mouse.emitButtons_()
   }
 }

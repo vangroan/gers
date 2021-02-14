@@ -43,6 +43,11 @@ pub fn init_game(ctx: &mut WrenContext) -> Game {
             .unwrap()
             .leak()
             .unwrap(),
+        push_button: ctx
+            .make_call_ref("input", "Mouse", "pushButton_(_,_)")
+            .unwrap()
+            .leak()
+            .unwrap(),
     };
 
     // Keyboard Input

@@ -2,11 +2,12 @@ use rust_wren::handle::WrenCallHandle;
 use rust_wren::WrenContext;
 use winit::{
     dpi::{LogicalPosition, PhysicalPosition},
-    event::{ElementState, VirtualKeyCode},
+    event::{ElementState, MouseButton, VirtualKeyCode},
 };
 
 pub struct Mouse {
     pub set_pos: WrenCallHandle,
+    pub push_button: WrenCallHandle,
 }
 
 impl Mouse {
@@ -18,6 +19,26 @@ impl Mouse {
     ) -> Option<()> {
         self.set_pos
             .call::<_, ()>(ctx, (logical.x, logical.y, physical.x, physical.y))
+    }
+
+    pub fn push_button(
+        &mut self,
+        ctx: &mut WrenContext,
+        button: MouseButton,
+        state: ElementState,
+    ) -> Option<()> {
+        // TODO: Do one of these 3 overlap with possible `Other(_)` values?
+        let button_id = match button {
+            MouseButton::Left => 1,
+            MouseButton::Middle => 2,
+            MouseButton::Right => 3,
+            MouseButton::Other(_) => unimplemented!("Other buttons not implemented yet"),
+        };
+        let state_bool = match state {
+            ElementState::Pressed => true,
+            ElementState::Released => false,
+        };
+        self.push_button.call::<_, ()>(ctx, (button_id, state_bool))
     }
 }
 

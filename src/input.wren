@@ -9,17 +9,77 @@ class Mouse {
   // Initialise the mouse state.
   static init_() {
     __state = {}
+    __buttons = []
+    __subs = []
     __logicalX = 0.0
     __logicalY = 0.0
     __physicalX = 0.0
     __physicalY = 0.0
+
+    // Map of numbers to mouse button names.
+    //
+    // Determined by what gets sent from Rust
+    // on mouse button state change.
+    __btn_map = {
+      1: "Left",
+      2: "Middle",
+      3: "Right",
+    }
   }
 
+  // Drains the character queue.
   static setPos_(lx, ly, px, py) {
     __logicalX = lx
     __logicalY = ly
     __physicalX = px
     __physicalY = py
+  }
+
+  // Indicates whether the given button is pressed or not.
+  //
+  // Note: When the state is undefined it is null.
+  static isButtonPressed(button) { __state[button] == true }
+
+  // Subscribes the given function to receive
+  // mouse button state events.
+  static onButton(fn) {
+    __subs.add(fn)
+  }
+
+  // Call subscribers with queued button states.
+  //
+  // Drains the character queue.
+  static emitButtons_() {
+    for (sub in __subs) {
+      for (button in __buttons) {
+        sub.call(button[0], button[1])
+      }
+    }
+
+    // Flush
+    __buttons.clear()
+  }
+
+  // Pushes the given button state onto the
+  // queue, to be handled by event subscribers.
+  //
+  // - `button` string identifying mouse button.
+  // - `isPressed` true when pressed, false when released.
+  //
+  // *Called from foreign*
+  static pushButton_(buttonId, isPressed) {
+    var button = __btn_map[buttonId]
+
+    var state = "Released"
+    if (isPressed) {
+      state = "Pressed"
+    }
+
+    // Queue for event listeners
+    __buttons.add([button, state])
+
+    // Map for polling state during frame update.
+    __state[button] = isPressed
   }
 }
 
@@ -57,7 +117,7 @@ class Keyboard {
   // Call subscribers with queued characters.
   //
   // Drains the character queue.
-  static emitChars() {
+  static emitChars_() {
     for (sub in __subs) {
       for (char in __chars) {
         sub.call(char)

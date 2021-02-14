@@ -12,6 +12,10 @@ class MyGame is Game {
     Keyboard.subscribeChar {|char|
       System.print("Character subscriber %(char)")
     }
+
+    Mouse.onButton {|button, state|
+      System.print("Mouse state %(button) %(state)")
+    }
   }
 
   update() {
@@ -35,6 +39,10 @@ class MyGame is Game {
 
     if (Keyboard.isKeyPressed("D")) {
       System.print("RIGHT")
+    }
+
+    if (Mouse.isButtonPressed("Left")) {
+      System.print("MOUSE LEFT")
     }
   }
 }

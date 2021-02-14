@@ -139,6 +139,13 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
                             });
                         }
                     }
+                    WindowEvent::MouseInput { button, state, .. } => {
+                        if let Some(game) = &mut game {
+                            vm.context(|ctx| {
+                                game.mouse.push_button(ctx, *button, *state).unwrap();
+                            });
+                        }
+                    }
                     WindowEvent::CursorMoved { position, .. } => {
                         if let Some(game) = &mut game {
                             vm.context(|ctx| {
