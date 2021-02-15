@@ -7,7 +7,9 @@ use std::{env, fs, path::Path, process};
 
 use self::errors::GersError;
 use self::game::{init_game, register_game, Game};
-use self::graphics::GraphicDevice;
+use self::graphics::{
+    bind_graphic_device, init_graphic_device, register_graphic_device, GraphicDevice, GRAPHICS_MODULE,
+};
 use self::window::WrenWindowConfig;
 use glutin::{
     dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest,
@@ -43,6 +45,9 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         .with_module("window", |module| {
             module.register::<window::WrenWindowConfig>();
         })
+        .with_module(GRAPHICS_MODULE, |module| {
+            bind_graphic_device(module);
+        })
         .with_write_fn(move |msg| {
             if msg != "\n" {
                 info!(wren_logger, "{}", msg)
@@ -53,6 +58,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Builtin modules
     vm.interpret("window", include_str!("window.wren"))?;
     vm.interpret("input", include_str!("input.wren"))?;
+    register_graphic_device(&mut vm)?;
     vm.interpret("main", include_str!("main.wren"))?;
     register_game(&mut vm)?;
 
@@ -115,7 +121,8 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         //       https://gitlab.com/vangroan/rust-wren/-/issues/12
         let mut maybe_game: Option<Game> = None;
         vm.context(|ctx| {
-            maybe_game = Some(init_game(ctx, logger.clone(), windowed_context, device));
+            let graphic_device_hooks = init_graphic_device(ctx, device);
+            maybe_game = Some(init_game(ctx, logger.clone(), windowed_context, graphic_device_hooks));
         });
         maybe_game.unwrap()
     };

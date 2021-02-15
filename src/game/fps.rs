@@ -22,15 +22,20 @@ impl FpsThrottle {
     ///
     /// Provide the instant measurement given during the last frame's call.
     pub fn throttle(&mut self, last_time: Instant) {
+        use FpsThrottlePolicy as P;
+
         self.last_time = last_time;
         let mut elapsed = Instant::now() - self.last_time;
 
         while elapsed < self.target {
             match self.policy {
-                FpsThrottlePolicy::Yield => {
+                P::Off => {
+                    return;
+                }
+                P::Yield => {
                     thread::yield_now();
                 }
-                FpsThrottlePolicy::Sleep => {
+                P::Sleep => {
                     let target_end = last_time + self.target;
                     let now = Instant::now();
                     if now < target_end {
@@ -47,6 +52,7 @@ impl FpsThrottle {
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub enum FpsThrottlePolicy {
+    Off,
     Yield,
     Sleep,
 }

@@ -1,4 +1,5 @@
 import "game" for Game
+import "graphics" for GraphicDevice
 import "input" for Keyboard, Mouse
 
 class MyGame is Game {
@@ -16,6 +17,8 @@ class MyGame is Game {
     Mouse.onButton {|button, state|
       System.print("Mouse state %(button) %(state)")
     }
+
+    _device = GraphicDevice.instance
   }
 
   update() {
@@ -47,7 +50,8 @@ class MyGame is Game {
   }
 
   draw() {
-    // TODO
+    // System.print("GraphicDevice %(_device)")
+    _device.clearScreen(4, 8, 12, 255)
   }
 }
 

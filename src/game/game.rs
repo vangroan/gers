@@ -1,8 +1,8 @@
 //! Game script entrypoint and hooks.
 use super::{FpsCounter, FpsThrottle, FpsThrottlePolicy};
-use crate::graphics::GraphicDevice;
 use crate::{
     errors::GersResult,
+    graphics::GraphicDeviceHooks,
     input::{Keyboard, Mouse},
     window::WrenWindowConfig,
 };
@@ -25,7 +25,7 @@ pub fn init_game(
     ctx: &mut WrenContext,
     logger: Logger,
     windowed_context: WindowedContext<PossiblyCurrent>,
-    graphic_device: GraphicDevice,
+    graphic_device_hooks: GraphicDeviceHooks,
 ) -> Game {
     // TODO:
     //  Change signature to return WrenResult
@@ -56,7 +56,7 @@ pub fn init_game(
         WrenCallRef::new(handler, update_ref).leak().unwrap()
     };
 
-    // Update
+    // Draw
     let draw_handle = {
         let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
         let draw_ref = FnSymbolRef::compile(ctx, "draw()").unwrap();
@@ -100,7 +100,7 @@ pub fn init_game(
         logger,
         window_conf: WrenWindowConfig::new(),
         windowed_context,
-        graphics: graphic_device,
+        graphic_hooks: graphic_device_hooks,
         scale_factor: 1.0,
         set_delta_time,
         init,
@@ -120,7 +120,7 @@ pub struct Game {
     pub logger: Logger,
     pub window_conf: WrenWindowConfig,
     pub windowed_context: WindowedContext<PossiblyCurrent>,
-    pub graphics: GraphicDevice,
+    pub graphic_hooks: GraphicDeviceHooks,
     pub scale_factor: f64,
     pub set_delta_time: WrenCallHandle,
     pub init: WrenCallHandle,
@@ -224,7 +224,13 @@ impl Game {
                         // Required on some platforms.
                         self.windowed_context.resize(*inner_size);
 
-                        self.graphics.set_viewport_size(*inner_size);
+                        // self.graphics.set_viewport_size(*inner_size);
+                        vm.context(|ctx| {
+                            self.graphic_hooks
+                                .set_viewport_handle
+                                .call::<_, ()>(ctx, (inner_size.width, inner_size.height));
+                        });
+
                         Ok(())
                     }
                     WE::ScaleFactorChanged { scale_factor, .. } => {
@@ -294,8 +300,6 @@ impl Game {
                 Ok(())
             }
             E::RedrawRequested(_window_id) => {
-                self.graphics.clear_screen([0.1, 0.2, 0.3, 1.0]);
-
                 vm.context(|ctx| {
                     self.draw_handle.call::<_, ()>(ctx, ()).unwrap();
                 });
