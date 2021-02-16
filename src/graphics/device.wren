@@ -6,15 +6,15 @@ foreign class GraphicDevice {
 
   // Create a new instance of graphic device, and register
   // it as the global singleton.
-  construct new_() {
-    System.print("GraphicDevice.new_()")
+  // construct new_() {
+  //   System.print("GraphicDevice.new_()")
 
-    if (__instance != null) {
-      Fiber.abort("Only one graphics device allowed")
-    }
+  //   if (__instance != null) {
+  //     Fiber.abort("Only one graphics device allowed")
+  //   }
 
-    __instance = this
-  }
+  //   __instance = this
+  // }
 
   // foreign getViewport()
   foreign setViewport_(width, height)

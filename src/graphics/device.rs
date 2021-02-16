@@ -190,6 +190,10 @@ impl GraphicDevice {
         }
     }
 
+    pub(crate) fn destroy_sender(&self) -> mpsc::Sender<Destroy> {
+        self.tx.clone()
+    }
+
     /// Release graphics resources.
     pub fn maintain(&self) {
         while let Ok(resource) = self.rx.try_recv() {

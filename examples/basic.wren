@@ -1,15 +1,22 @@
 import "game" for Game
-import "graphics" for GraphicDevice
+import "graphics" for GraphicDevice, VertexBuffer
 import "input" for Keyboard, Mouse
+import "collections" for U16Array
 
 class MyGame is Game {
   construct new() {
+    // Note: Graphic Device is not ready here
     super.setup(this)
 
     _timer = 0.0
   }
 
   init() {
+    _device = GraphicDevice.instance
+
+    System.print("MyGame.init()")
+    createVertexArray_()
+    
     Keyboard.subscribeChar {|char|
       System.print("Character subscriber %(char)")
     }
@@ -17,8 +24,6 @@ class MyGame is Game {
     Mouse.onButton {|button, state|
       System.print("Mouse state %(button) %(state)")
     }
-
-    _device = GraphicDevice.instance
   }
 
   update() {
@@ -52,6 +57,29 @@ class MyGame is Game {
   draw() {
     // System.print("GraphicDevice %(_device)")
     _device.clearScreen(4, 8, 12, 255)
+    // _device.clearScreen(128, 200, 255, 255)
+  }
+
+  createVertexArray_() {
+    // Triangle Indices
+    var indices = U16Array.new()
+    
+    // Triangle 1
+    indices.add(0)
+    indices.add(1)
+    indices.add(2)
+
+    // Triangle 2
+    indices.add(0)
+    indices.add(2)
+    indices.add(3)
+
+    for (item in indices) {
+      System.print(item)
+    }
+
+    // var vertexArray = VertexArray.new(_device, indices)
+    var v = VertexBuffer.new(GraphicDevice.instance, null, indices)
   }
 }
 

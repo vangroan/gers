@@ -10,6 +10,7 @@ edition = "2018"
 lazy_static = "1.4"
 legion = { version = "0.3", default-features = false }
 log = "0.4"
+memoffset = "0.6"
 nalgebra = "0.24"
 num-traits = "0.2"
 serde = "1.0"

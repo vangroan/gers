@@ -750,6 +750,7 @@ dependencies = [
  "lazy_static",
  "legion",
  "log",
+ "memoffset",
  "nalgebra",
  "num-traits",
  "rust-wren",

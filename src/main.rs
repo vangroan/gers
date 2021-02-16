@@ -3,12 +3,12 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-use std::{env, fs, path::Path, process};
-
+use self::collections::{bind_collections, register_collections, COLLECTIONS_MODULE};
 use self::errors::GersError;
 use self::game::{init_game, register_game, Game};
 use self::graphics::{
-    bind_graphic_device, init_graphic_device, register_graphic_device, GraphicDevice, GRAPHICS_MODULE,
+    bind_graphic_device, bind_graphics, init_graphic_device, register_graphic_device, register_graphics, GraphicDevice,
+    GRAPHICS_MODULE,
 };
 use self::window::WrenWindowConfig;
 use glutin::{
@@ -19,10 +19,13 @@ use rust_wren::{
     prelude::*,
 };
 use slog::Drain;
+use std::{env, fs, path::Path, process};
 
 mod errors;
 mod game;
+#[macro_use]
 mod graphics;
+mod collections;
 mod input;
 mod marker;
 mod util;
@@ -47,6 +50,10 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         })
         .with_module(GRAPHICS_MODULE, |module| {
             bind_graphic_device(module);
+            bind_graphics(module);
+        })
+        .with_module(COLLECTIONS_MODULE, |module| {
+            bind_collections(module);
         })
         .with_write_fn(move |msg| {
             if msg != "\n" {
@@ -56,8 +63,10 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         .build();
 
     // Builtin modules
+    register_collections(&mut vm)?;
     vm.interpret("window", include_str!("window.wren"))?;
     vm.interpret("input", include_str!("input.wren"))?;
+    register_graphics(&mut vm)?;
     register_graphic_device(&mut vm)?;
     vm.interpret("main", include_str!("main.wren"))?;
     register_game(&mut vm)?;
