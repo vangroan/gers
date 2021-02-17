@@ -745,6 +745,7 @@ dependencies = [
 name = "gers"
 version = "0.1.0"
 dependencies = [
+ "gers-codegen",
  "glow",
  "glutin 0.26.0",
  "lazy_static",
@@ -763,6 +764,14 @@ dependencies = [
  "slog-term",
  "smol_str",
  "winit 0.24.0",
+]
+
+[[package]]
+name = "gers-codegen"
+version = "0.1.0"
+dependencies = [
+ "quote 1.0.7",
+ "syn",
 ]
 
 [[package]]

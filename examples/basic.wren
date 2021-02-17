@@ -1,7 +1,7 @@
 import "game" for Game
 import "graphics" for GraphicDevice, VertexBuffer
 import "input" for Keyboard, Mouse
-import "collections" for U16Array
+import "collections" for U16Array, U8Array
 
 class MyGame is Game {
   construct new() {
@@ -79,8 +79,25 @@ class MyGame is Game {
     }
 
     // var vertexArray = VertexArray.new(_device, indices)
-    var v = VertexBuffer.new(GraphicDevice.instance, null, indices)
+    var v = VertexBuffer.new(GraphicDevice.instance, null, indices)    
+  }
+
+  static testArray() {
+    // Just some cheeky tests
+    var bytes = U8Array.new()
+    bytes.add(1)
+    bytes.add(2)
+    bytes.add(3)
+    bytes.add(11111) // overflow
+    for (byte in bytes) {
+      System.print("Byte: %(byte)")
+    }
+    
+    bytes
+      .map {|byte| 2.pow(byte)}
+      .each {|byte| System.print("Byte: %(byte)")}
   }
 }
 
+MyGame.testArray()
 Game.run(MyGame.new())

@@ -36,3 +36,7 @@ version = "*"
 git = "https://gitlab.com/vangroan/rust-wren.git"
 branch = "main"
 
+[dependencies.gers-codegen]
+version = "*"
+path = "./gers-codegen"
+

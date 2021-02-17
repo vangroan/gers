@@ -1,6 +1,13 @@
 //! Statically typed arrays for Wren.
+use gers_codegen::impl_array;
 use rust_wren::{prelude::*, WrenContext, WrenResult};
 use std::{error::Error, fmt};
+
+impl_array!(U8, u8);
+// impl_array!(U16, u16);
+impl_array!(U32, u32);
+impl_array!(F32, f32);
+impl_array!(F64, f64);
 
 #[wren_class]
 pub struct U16Array(Vec<u16>);
@@ -114,8 +121,8 @@ impl Default for U16Array {
 
 #[derive(Debug)]
 pub struct OutOfBounds {
-    index: i32,
-    size: usize,
+    pub index: i32,
+    pub size: usize,
 }
 
 impl Error for OutOfBounds {}
