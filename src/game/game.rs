@@ -1,8 +1,7 @@
 //! Game script entrypoint and hooks.
-use super::{FpsCounter, FpsThrottle, FpsThrottlePolicy};
-use crate::errors::GersError;
 use crate::{
-    errors::{log_wren_error, GersResult},
+    errors::{log_wren_error, GersError, GersResult},
+    game::{FpsCounter, FpsThrottle, FpsThrottlePolicy},
     graphics::GraphicDeviceHooks,
     input::{Keyboard, Mouse},
     window::WrenWindowConfig,
