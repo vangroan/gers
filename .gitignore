@@ -1,1 +1,10 @@
+# Rust
 /target
+
+# Project files and directories
+.idea/
+.vs/
+
+# Binary files
+*.exe
+*.pdb

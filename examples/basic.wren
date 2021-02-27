@@ -6,13 +6,17 @@ import "collections" for U16Array, U8Array, I8Array
 class MyGame is Game {
   construct new() {
     // Note: Graphic Device is not ready here
-    super.setup(this)
+    super()
 
     _timer = 0.0
   }
 
   init() {
     _device = GraphicDevice.instance
+
+    Game.onError.add {|error|
+      System.print("Script handled error %(error)")
+    }
 
     System.print("MyGame.init()")
     System.print("GraphicDevice: %(GraphicDevice.instance)")

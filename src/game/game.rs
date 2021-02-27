@@ -135,6 +135,12 @@ impl Game {
         let mut last_time = Instant::now();
         let mut delta_time = Duration::from_millis(16);
 
+        // Variable to smuggling event loop error out of the closure.
+        let mut result: Option<GersResult<()>> = None;
+
+        // Prevent the result from being moved into the closure.
+        let mut result_ref = &mut result;
+
         // Event loop is a diverging function, it never returns.
         //
         // Some considerations must be taken for the drop order. The Main
@@ -159,10 +165,18 @@ impl Game {
 
             // TODO: handle error return.
             //       Either panic or channel error to script.
-            let _result = self.handle_event(args);
+            if let Err(err) = self.handle_event(args) {
+                error!(self.logger, "Event loop error");
+
+                // Abort event loop.
+                *control_flow = ControlFlow::Exit;
+
+                // Smuggle result out of closure.
+                *result_ref = Some(Err(err));
+            }
         });
 
-        Ok(())
+        result.unwrap_or_else(|| Ok(()))
     }
 
     /// Dispatch single event.
@@ -259,12 +273,17 @@ impl Game {
             }
             E::MainEventsCleared => {
                 // Frame update after events have been flushed.
-                vm.context(|ctx| {
-                    self.set_delta_time
-                        .call::<_, ()>(ctx, delta_time.as_secs_f64())
-                        .unwrap();
-                    self.update.call::<_, ()>(ctx, ()).unwrap();
+                let update_result = vm.context_result(|ctx| {
+                    self.set_delta_time.call::<_, ()>(ctx, delta_time.as_secs_f64())?;
+                    self.update.call::<_, ()>(ctx, ())
                 });
+
+                // TODO: Feed fatal error into an error view rendered by the game. Requires text rendering.
+                if let Err(err) = update_result {
+                    error!(self.logger, "Event loop update error");
+                    log_wren_error(&self.logger, &err);
+                    return Err(GersError::Wren(err));
+                };
 
                 self.windowed_context.window().set_title(&format!(
                     "{} - {:.2} FPS",
