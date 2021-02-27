@@ -1,7 +1,8 @@
 //! Game script entrypoint and hooks.
 use super::{FpsCounter, FpsThrottle, FpsThrottlePolicy};
+use crate::errors::GersError;
 use crate::{
-    errors::GersResult,
+    errors::{log_wren_error, GersResult},
     graphics::GraphicDeviceHooks,
     input::{Keyboard, Mouse},
     window::WrenWindowConfig,
@@ -26,77 +27,49 @@ pub fn init_game(
     logger: Logger,
     windowed_context: WindowedContext<PossiblyCurrent>,
     graphic_device_hooks: GraphicDeviceHooks,
-) -> Game {
-    // TODO:
-    //  Change signature to return WrenResult
-    //  Change all unwraps to ?
-
+) -> WrenResult<Game> {
     // The user's game instance, which is the entry point from Rust into
     // the Wren program, is stored in a property.
-    let get_handler = ctx.make_call_ref("game", "Game", "handler_").unwrap();
+    let get_handler = ctx.make_call_ref("game", "Game", "handler_")?;
 
     // Delta Time
-    let set_delta_time = ctx
-        .make_call_ref("game", "Game", "deltaTime_=(_)")
-        .unwrap()
-        .leak()
-        .unwrap();
+    let set_delta_time = ctx.make_call_ref("game", "Game", "deltaTime_=(_)")?.leak()?;
 
     // Init
     let init = {
-        let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-        let init_ref = FnSymbolRef::compile(ctx, "init()").unwrap();
-        WrenCallRef::new(handler, init_ref).leak().unwrap()
+        let handler = get_handler.call::<_, WrenRef>(ctx, ())?;
+        let init_ref = FnSymbolRef::compile(ctx, "init()")?;
+        WrenCallRef::new(handler, init_ref).leak()?
     };
 
     // Update
     let update = {
-        let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-        let update_ref = FnSymbolRef::compile(ctx, "process_()").unwrap();
-        WrenCallRef::new(handler, update_ref).leak().unwrap()
+        let handler = get_handler.call::<_, WrenRef>(ctx, ())?;
+        let update_ref = FnSymbolRef::compile(ctx, "process_()")?;
+        WrenCallRef::new(handler, update_ref).leak()?
     };
 
     // Draw
     let draw_handle = {
-        let handler = get_handler.call::<_, WrenRef>(ctx, ()).unwrap();
-        let draw_ref = FnSymbolRef::compile(ctx, "draw()").unwrap();
-        WrenCallRef::new(handler, draw_ref).leak().unwrap()
+        let handler = get_handler.call::<_, WrenRef>(ctx, ())?;
+        let draw_ref = FnSymbolRef::compile(ctx, "draw()")?;
+        WrenCallRef::new(handler, draw_ref).leak()?
     };
 
     // Mouse Input
     let mouse = Mouse {
-        set_pos: ctx
-            .make_call_ref("input", "Mouse", "setPos_(_,_,_,_)")
-            .unwrap()
-            .leak()
-            .unwrap(),
-        push_button: ctx
-            .make_call_ref("input", "Mouse", "pushButton_(_,_)")
-            .unwrap()
-            .leak()
-            .unwrap(),
+        set_pos: ctx.make_call_ref("input", "Mouse", "setPos_(_,_,_,_)")?.leak()?,
+        push_button: ctx.make_call_ref("input", "Mouse", "pushButton_(_,_)")?.leak()?,
     };
 
     // Keyboard Input
     let keyboard = Keyboard {
-        set_key_press: ctx
-            .make_call_ref("input", "Keyboard", "setKeyPress_(_)")
-            .unwrap()
-            .leak()
-            .unwrap(),
-        set_key_release: ctx
-            .make_call_ref("input", "Keyboard", "setKeyRelease_(_)")
-            .unwrap()
-            .leak()
-            .unwrap(),
-        push_char: ctx
-            .make_call_ref("input", "Keyboard", "pushChar_(_)")
-            .unwrap()
-            .leak()
-            .unwrap(),
+        set_key_press: ctx.make_call_ref("input", "Keyboard", "setKeyPress_(_)")?.leak()?,
+        set_key_release: ctx.make_call_ref("input", "Keyboard", "setKeyRelease_(_)")?.leak()?,
+        push_char: ctx.make_call_ref("input", "Keyboard", "pushChar_(_)")?.leak()?,
     };
 
-    Game {
+    Ok(Game {
         logger,
         window_conf: WrenWindowConfig::new(),
         windowed_context,
@@ -108,7 +81,7 @@ pub fn init_game(
         draw_handle,
         mouse,
         keyboard,
-    }
+    })
 }
 
 /// Register builtin game module.
@@ -141,9 +114,14 @@ impl Game {
         // Initialisation hook.
         //
         // After Window has been initialised, before event loop starts.
-        vm.context(|ctx| {
-            self.init.call::<_, ()>(ctx, ()).unwrap();
-        });
+        let init_result = vm.context_result(|ctx| self.init.call::<_, ()>(ctx, ()));
+
+        // TODO: Feed fatal error into an error view rendered by the game. Requires text rendering.
+        if let Err(err) = init_result {
+            error!(self.logger, "Error initialising game");
+            log_wren_error(&self.logger, &err);
+            return Err(GersError::Wren(err));
+        };
 
         // Frame rate throttle to prevent excessive CPU usage, battery drainage
         // and laptop fans freaking out.
@@ -228,7 +206,8 @@ impl Game {
                         vm.context(|ctx| {
                             self.graphic_hooks
                                 .set_viewport_handle
-                                .call::<_, ()>(ctx, (inner_size.width, inner_size.height));
+                                .call::<_, ()>(ctx, (inner_size.width, inner_size.height))
+                                .unwrap();
                         });
 
                         Ok(())
@@ -305,7 +284,7 @@ impl Game {
                 });
 
                 // Display the drawn buffer in the window.
-                self.windowed_context.swap_buffers();
+                self.windowed_context.swap_buffers().unwrap();
 
                 Ok(())
             }
@@ -322,7 +301,7 @@ impl Game {
                         .expect("Failed to lookup Bootstrap class");
                     let func = FnSymbolRef::compile(ctx, "shutdown()").unwrap();
                     let call_ref = WrenCallRef::new(receiver, func);
-                    call_ref.call::<_, ()>(ctx, ());
+                    call_ref.call::<_, ()>(ctx, ()).unwrap();
                 });
 
                 // Release reference before VM is dropped.

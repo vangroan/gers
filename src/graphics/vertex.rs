@@ -18,6 +18,24 @@ impl Vertex {
             color: [1.0, 1.0, 1.0, 1.0],
         }
     }
+
+    #[method(name = setPos)]
+    #[inline]
+    pub fn set_pos(&mut self, x: f32, y: f32) {
+        self.position = [x, y];
+    }
+
+    #[method(name = setUv)]
+    #[inline]
+    pub fn set_uv(&mut self, u: f32, v: f32) {
+        self.uv = [u, v];
+    }
+
+    #[method(name = setColor)]
+    #[inline]
+    pub fn set_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.color = [r, g, b, a];
+    }
 }
 
 impl Default for Vertex {

@@ -27,6 +27,8 @@ impl GfxError {
     }
 }
 
+impl Error for GfxError {}
+
 impl fmt::Display for GfxError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use GfxError as E;

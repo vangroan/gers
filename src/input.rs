@@ -1,5 +1,4 @@
-use rust_wren::handle::WrenCallHandle;
-use rust_wren::WrenContext;
+use rust_wren::{handle::WrenCallHandle, WrenContext, WrenResult};
 use winit::{
     dpi::{LogicalPosition, PhysicalPosition},
     event::{ElementState, MouseButton, VirtualKeyCode},
@@ -16,12 +15,12 @@ impl Mouse {
         ctx: &mut WrenContext,
         logical: LogicalPosition<f64>,
         physical: PhysicalPosition<f64>,
-    ) -> Option<()> {
+    ) -> WrenResult<()> {
         self.set_pos
             .call::<_, ()>(ctx, (logical.x, logical.y, physical.x, physical.y))
     }
 
-    pub fn push_button(&mut self, ctx: &mut WrenContext, button: MouseButton, state: ElementState) -> Option<()> {
+    pub fn push_button(&mut self, ctx: &mut WrenContext, button: MouseButton, state: ElementState) -> WrenResult<()> {
         // TODO: Do one of these 3 overlap with possible `Other(_)` values?
         let button_id = match button {
             MouseButton::Left => 1,
@@ -44,14 +43,19 @@ pub struct Keyboard {
 }
 
 impl Keyboard {
-    pub fn set_key_state(&mut self, ctx: &mut WrenContext, keycode: VirtualKeyCode, state: ElementState) -> Option<()> {
+    pub fn set_key_state(
+        &mut self,
+        ctx: &mut WrenContext,
+        keycode: VirtualKeyCode,
+        state: ElementState,
+    ) -> WrenResult<()> {
         match state {
             ElementState::Pressed => self.set_key_press.call::<_, ()>(ctx, format!("{:?}", keycode)),
             ElementState::Released => self.set_key_release.call::<_, ()>(ctx, format!("{:?}", keycode)),
         }
     }
 
-    pub fn push_char(&mut self, ctx: &mut WrenContext, input: char) -> Option<()> {
+    pub fn push_char(&mut self, ctx: &mut WrenContext, input: char) -> WrenResult<()> {
         // TODO:
         //  Horribly inefficient. We're copying a string (ToWren) on each press,
         //  and incurring an allocation in Wren.

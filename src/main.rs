@@ -4,7 +4,7 @@ extern crate slog_async;
 extern crate slog_term;
 
 use self::collections::{bind_collections, register_collections, COLLECTIONS_MODULE};
-use self::errors::GersError;
+use self::errors::{log_wren_error, GersError};
 use self::game::{init_game, register_game, Game};
 use self::graphics::{
     bind_graphic_device, bind_graphics, init_graphic_device, register_graphic_device, register_graphics, GraphicDevice,
@@ -17,6 +17,7 @@ use glutin::{
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
+    WrenResult,
 };
 use slog::Drain;
 use std::{env, fs, path::Path, process};
@@ -30,6 +31,20 @@ mod input;
 mod marker;
 mod util;
 mod window;
+
+/// Register the builtin modules in the given Wren VM by interpreting
+/// the script contents.
+fn load_builtins(vm: &mut WrenVm) -> WrenResult<()> {
+    register_collections(vm)?;
+    vm.interpret("window", include_str!("window.wren"))?;
+    vm.interpret("input", include_str!("input.wren"))?;
+    register_graphics(vm)?;
+    register_graphic_device(vm)?;
+    vm.interpret("main", include_str!("main.wren"))?;
+    register_game(vm)?;
+
+    Ok(())
+}
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Logging
@@ -62,14 +77,14 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         })
         .build();
 
+    // Wren logger for runtime and compiler errors.
+    let wren_logger = root.new(o!("lang" => "Wren"));
+
     // Builtin modules
-    register_collections(&mut vm)?;
-    vm.interpret("window", include_str!("window.wren"))?;
-    vm.interpret("input", include_str!("input.wren"))?;
-    register_graphics(&mut vm)?;
-    register_graphic_device(&mut vm)?;
-    vm.interpret("main", include_str!("main.wren"))?;
-    register_game(&mut vm)?;
+    if let Err(err) = load_builtins(&mut vm) {
+        log_wren_error(&wren_logger, &err);
+        return Err(err.into());
+    };
 
     // Validate the entry point exists
     let args: Vec<String> = env::args().collect();
@@ -82,7 +97,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     info!(logger, "Entry point: {}", script_entry);
     let entry_path = Path::new(script_entry);
     if !entry_path.exists() {
-        error!(logger, "Entry point does not exist");
+        error!(logger, "Entry point does not exist: {}", entry_path.display());
         return Err("Entry point does not exist".into());
     }
 
@@ -124,16 +139,20 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         // In block so source is dropped when loading is done.
         // It's copied into Wren so no need to keep it in memory.
         let source = fs::read_to_string(entry_path)?;
-        vm.interpret("core", &source)?;
+        let interp_result = vm.interpret("core", &source);
+        if let Err(err) = interp_result {
+            log_wren_error(&wren_logger, &err);
+            return Err(err.into());
+        };
 
-        // TODO: We need this outer variable because the context call has no return yet.
-        //       https://gitlab.com/vangroan/rust-wren/-/issues/12
-        let mut maybe_game: Option<Game> = None;
-        vm.context(|ctx| {
+        let init_result = vm.context_result(|ctx| {
             let graphic_device_hooks = init_graphic_device(ctx, device);
-            maybe_game = Some(init_game(ctx, logger.clone(), windowed_context, graphic_device_hooks));
+            init_game(ctx, logger.clone(), windowed_context, graphic_device_hooks)
         });
-        maybe_game.unwrap()
+        if let Err(err) = &init_result {
+            log_wren_error(&wren_logger, &err);
+        };
+        init_result?
     };
 
     game.window_conf = conf;

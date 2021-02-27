@@ -1,7 +1,7 @@
 import "game" for Game
-import "graphics" for GraphicDevice, VertexBuffer
+import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex
 import "input" for Keyboard, Mouse
-import "collections" for U16Array, U8Array
+import "collections" for U16Array, U8Array, I8Array
 
 class MyGame is Game {
   construct new() {
@@ -15,7 +15,8 @@ class MyGame is Game {
     _device = GraphicDevice.instance
 
     System.print("MyGame.init()")
-    createVertexArray_()
+    System.print("GraphicDevice: %(GraphicDevice.instance)")
+    // createVertexArray_()
     
     Keyboard.subscribeChar {|char|
       System.print("Character subscriber %(char)")
@@ -24,6 +25,8 @@ class MyGame is Game {
     Mouse.onButton {|button, state|
       System.print("Mouse state %(button) %(state)")
     }
+
+    MyGame.testArray()
   }
 
   update() {
@@ -79,7 +82,7 @@ class MyGame is Game {
     }
 
     // var vertexArray = VertexArray.new(_device, indices)
-    var v = VertexBuffer.new(GraphicDevice.instance, null, indices)    
+    var v = VertexArrayObject.new(GraphicDevice.instance, null, indices)    
   }
 
   static testArray() {
@@ -96,8 +99,56 @@ class MyGame is Game {
     bytes
       .map {|byte| 2.pow(byte)}
       .each {|byte| System.print("Byte: %(byte)")}
+
+    // i8
+    var ints = I8Array.new()
+    ints.add(-1)
+    ints.add(-1000)
+    ints.each {|i| System.print("i8: %(i)") }
+
+    // index
+    var indices = U16Array.new()
+    indices.add(0)
+    indices.add(1)
+    indices.add(2)
+
+    indices.add(0)
+    indices.add(2)
+    indices.add(3)
+
+    // vertex
+    // Note: Vertex is copied into array, so we can
+    //       reuse the same instance.
+    var vertices = VertexArray.new()
+    var vertex = Vertex.new()
+
+    vertex.setPos(0.0, 0.0)
+    vertex.setUv(0.0, 0.0)
+    vertex.setColor(1.0, 0.0, 0.0, 1.0)
+    vertices.add(vertex)
+
+    vertex.setPos(1.0, 0.0)
+    vertex.setUv(1.0, 0.0)
+    vertex.setColor(0.0, 1.0, 0.0, 1.0)
+    vertices.add(vertex)
+
+    vertex.setPos(1.0, 1.0)
+    vertex.setUv(1.0, 1.0)
+    vertex.setColor(0.0, 0.0, 1.0, 1.0)
+    vertices.add(vertex)
+
+    vertex.setPos(0.0, 1.0)
+    vertex.setUv(0.0, 1.0)
+    vertex.setColor(0.0, 1.0, 1.0, 1.0)
+    vertices.add(vertex)
+
+    System.print("%(vertices.toString())")
+
+    // Vertex Array Object
+    System.print("GraphicDevice %(GraphicDevice.instance)")
+    var vao = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
   }
 }
 
-MyGame.testArray()
 Game.run(MyGame.new())
+// MyGame.testArray()

@@ -1,21 +1,23 @@
-//! Vertex buffer object
-use super::Vertex;
+//! Vertex array object
 use crate::{
     collections::U16Array,
     gl_result,
     graphics::{
         device::{Destroy, GraphicDevice},
-        utils, GfxError,
+        utils, GfxError, Vertex, VertexArray,
     },
 };
 use glow::HasContext;
-use rust_wren::prelude::*;
+use rust_wren::{prelude::*, ForeignError};
 use std::borrow::Borrow;
 use std::{mem, sync::mpsc::Sender};
 
-/// Handle to a vertex buffer object located in video memory.
+/// Handle to a vertex array object located in video memory.
+///
+/// Contains standard buffer attachments determined by the
+/// needs of the game engine.
 #[wren_class]
-pub struct VertexBuffer {
+pub struct VertexArrayObject {
     vbo: u32,
     vertex_buffer: u32,
     index_buffer: u32,
@@ -23,28 +25,46 @@ pub struct VertexBuffer {
 }
 
 #[wren_methods]
-impl VertexBuffer {
-    /// Create a new vertex buffer from Wren.
+impl VertexArrayObject {
+    /// Required but unimplemented constructor.
+    ///
+    /// FIXME: `rust-wren` is currently limited to constructors
+    ///        that only return `Self`. Because graphics allocations
+    ///        can fail, we need to return `Result<Self>`.
     #[construct]
-    fn new(device: &WrenCell<GraphicDevice>, vertices: Option<()>, indices: &WrenCell<U16Array>) -> Self {
-        println!("VertexBuffer.new()");
-        println!("  indices = {:?}", indices.borrow().as_slice());
+    fn new_() -> Self {
+        unimplemented!()
+    }
 
-        Self {
-            vbo: 0,
-            vertex_buffer: 0,
-            index_buffer: 0,
-            destroy: device.borrow().destroy_sender(),
-        }
+    /// Create a new vertex buffer from Wren.
+    fn new(
+        device: &WrenCell<GraphicDevice>,
+        vertices: &WrenCell<VertexArray>,
+        indices: &WrenCell<U16Array>,
+    ) -> Result<Self, ForeignError> {
+        log::trace!("VertexArrayObject.new()");
+        log::trace!("  vertices = {:?}", vertices.borrow());
+        log::trace!("  indices = {:?}", indices.borrow());
+
+        Self::create(
+            &*device.borrow(),
+            vertices.borrow().as_slice(),
+            U16Array::as_slice(&*indices.borrow()),
+            UsageFrequency::Dynamic,
+            UsageNature::Draw,
+        )
+        .map_err(|err| foreign_error!(err))
     }
 }
 
-impl VertexBuffer {
+impl VertexArrayObject {
     // FIXME: Locations determined by sprite shader.
     const POSITION_LOC: u32 = 0;
     const UV_LOC: u32 = 1;
     const COLOR_LOC: u32 = 2;
 
+    /// Allocates the vertex array object in video memory, along
+    /// with the buffers used by the game engine.
     pub fn create(
         device: &GraphicDevice,
         vertices: &[Vertex],
@@ -129,6 +149,7 @@ impl VertexBuffer {
         }
     }
 
+    /// Map two memory hint enums to an OpenGL enum.
     fn mem_hint(frequency: UsageFrequency, nature: UsageNature) -> u32 {
         use UsageFrequency as F;
         use UsageNature as N;
@@ -147,7 +168,7 @@ impl VertexBuffer {
     }
 }
 
-impl Drop for VertexBuffer {
+impl Drop for VertexArrayObject {
     fn drop(&mut self) {
         self.destroy.send(Destroy::VertexArray(self.vbo)).unwrap();
     }

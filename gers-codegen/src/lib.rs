@@ -37,7 +37,7 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
         }
     };
 
-    let ty_path  = match ast.iter().skip(1).next() {
+    let ty_path = match ast.iter().nth(1) {
         Some(expr) => match expr {
             Expr::Path(path_expr) => path_expr.path.clone(),
             _ => {
@@ -75,6 +75,7 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
             use super::*;
             use rust_wren::prelude::*;
             use crate::collections::{OutOfBounds, ArrayIterator};
+            use std::fmt;
 
             /// Statically typed vector intended to be used in Wren scripts.
             ///
@@ -212,6 +213,7 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
                     foreign class {} is Sequence {{
                       construct new() {{}}
 
+                      // TODO: Support subscript operator
                       foreign get(index)
                       foreign add(value)
                       foreign insert(index, value)
@@ -241,6 +243,13 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
             impl From<Vec<#ty_path>> for #array_ident {
                 fn from(vector: Vec<#ty_path>) -> Self {
                     #array_ident(vector)
+                }
+            }
+
+            impl fmt::Debug for #array_ident {
+                #[inline]
+                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    f.debug_list().entries(self.0.iter()).finish()
                 }
             }
         }
