@@ -1,5 +1,8 @@
+use super::rect::Rect;
 use glow::HasContext;
 use std::{error::Error, fmt};
+
+pub type GfxResult<T> = Result<T, GfxError>;
 
 #[derive(Debug)]
 pub enum GfxError {
@@ -7,12 +10,24 @@ pub enum GfxError {
     /// Contextual depending on which commands
     /// were run.
     OpenGl(u32),
+
+    /// Texture size is not valid for the graphics hardware.
+    InvalidTextureSize(u32, u32),
+
+    /// Inner-texture does not fit in outer-texture.
+    InvalidSubTexture { outer: Rect<u32>, inner: Rect<u32> },
+
+    /// Error when a buffer of image data does not fit inside
+    /// the specific texture rectangle.
+    ///
+    /// Data length would be something like `width * height * rgba`.
+    InvalidImageData { expected: usize, actual: usize },
 }
 
 impl GfxError {
     pub fn opengl_error_name(&self) -> Option<&str> {
         match self {
-            Self::OpenGl(code) => match *code {
+            GfxError::OpenGl(code) => match *code {
                 glow::NO_ERROR => Some("GL_NO_ERROR"),
                 glow::INVALID_ENUM => Some("GL_INVALID_ENUM"),
                 glow::INVALID_VALUE => Some("GL_INVALID_VALUE"),
@@ -23,6 +38,7 @@ impl GfxError {
                 glow::STACK_OVERFLOW => Some("GL_STACK_OVERFLOW"),
                 _ => None,
             },
+            _ => None,
         }
     }
 }
@@ -52,6 +68,19 @@ impl fmt::Display for GfxError {
                     _ => Ok(()),
                 }
             }
+            E::InvalidTextureSize(width, height) => write!(
+                f,
+                "Invalid texture size ({}, {}). Ensure that neither dimension is zero, and is power-of-two.",
+                width, height
+            ),
+            E::InvalidSubTexture { inner, outer } => {
+                write!(f, "Sub-texture rectangle {} does not fit in {}.", inner, outer)
+            }
+            E::InvalidImageData { expected, actual } => write!(
+                f,
+                "Image data does not match texture storage size. Expected bytes {}. Actual bytes {}.",
+                expected, actual
+            ),
         }
     }
 }

@@ -97,6 +97,11 @@ impl GraphicDevice {
         todo!()
     }
 
+    #[method(name = hasExtension)]
+    pub fn has_extension(&self, extension: &str) -> bool {
+        self.extensions.contains(extension)
+    }
+
     #[method(name = maintain)]
     pub fn script_maintain(&self) {
         self.maintain();

@@ -1,5 +1,5 @@
 import "game" for Game
-import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex
+import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture
 import "input" for Keyboard, Mouse
 import "collections" for U16Array, U8Array, I8Array
 
@@ -59,7 +59,7 @@ class MyGame is Game {
 
   draw() {
     // System.print("GraphicDevice %(_device)")
-    _device.clearScreen(4, 8, 12, 255)
+    _device.clearScreen(8, 16, 24, 255)
     // _device.clearScreen(128, 200, 255, 255)
   }
 
@@ -147,8 +147,13 @@ class MyGame is Game {
     // Vertex Array Object
     System.print("GraphicDevice %(GraphicDevice.instance)")
     var vao = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
+
+    // Texture
+    var texture = Texture.new(GraphicDevice.instance, 512, 512)
   }
 }
 
-Game.run(MyGame.new())
+MyGame.new()
+
+// Game.run(MyGame.new())
 // MyGame.testArray()
