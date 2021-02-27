@@ -15,13 +15,22 @@ pub enum GfxError {
     InvalidTextureSize(u32, u32),
 
     /// Inner-texture does not fit in outer-texture.
-    InvalidSubTexture { outer: Rect<u32>, inner: Rect<u32> },
+    InvalidSubTexture {
+        outer: Rect<u32>,
+        inner: Rect<u32>,
+    },
 
     /// Error when a buffer of image data does not fit inside
     /// the specific texture rectangle.
     ///
     /// Data length would be something like `width * height * rgba`.
-    InvalidImageData { expected: usize, actual: usize },
+    InvalidImageData {
+        expected: usize,
+        actual: usize,
+    },
+
+    // Shader compilation error.
+    ShaderCompile(String),
 }
 
 impl GfxError {
@@ -81,6 +90,7 @@ impl fmt::Display for GfxError {
                 "Image data does not match texture storage size. Expected bytes {}. Actual bytes {}.",
                 expected, actual
             ),
+            E::ShaderCompile(message) => write!(f, "Shader compile error: {}", message),
         }
     }
 }

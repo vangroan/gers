@@ -3,7 +3,7 @@ use crate::{
     collections::U16Array,
     gl_result,
     graphics::{
-        device::{Destroy, GraphicDevice},
+        device::{Destroy, DestroyQueue, GraphicDevice},
         utils, GfxError, Vertex, VertexArray,
     },
 };
@@ -21,7 +21,7 @@ pub struct VertexArrayObject {
     vbo: u32,
     vertex_buffer: u32,
     index_buffer: u32,
-    destroy: Sender<Destroy>,
+    destroy: DestroyQueue,
 }
 
 #[wren_methods]
@@ -144,7 +144,7 @@ impl VertexArrayObject {
                 vbo: vertex_array,
                 vertex_buffer,
                 index_buffer,
-                destroy: device.destroy_sender(),
+                destroy: device.destroy_queue(),
             })
         }
     }
@@ -170,7 +170,7 @@ impl VertexArrayObject {
 
 impl Drop for VertexArrayObject {
     fn drop(&mut self) {
-        self.destroy.send(Destroy::VertexArray(self.vbo)).unwrap();
+        self.destroy.send(Destroy::VertexArray(self.vbo));
     }
 }
 

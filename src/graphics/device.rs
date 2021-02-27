@@ -7,7 +7,13 @@ use rust_wren::{
     prelude::*,
     ModuleBuilder, WrenContext, WrenResult, WrenVm,
 };
-use std::{cell::Cell, collections::HashSet, fmt, sync::mpsc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashSet,
+    fmt,
+    rc::Rc,
+    sync::mpsc,
+};
 
 pub fn init_graphic_device(ctx: &mut WrenContext, device: GraphicDevice) -> GraphicDeviceHooks {
     // Move graphic device to Wren to own it.
@@ -55,6 +61,7 @@ pub struct GraphicDevice {
     extensions: HashSet<String>,
     tx: mpsc::Sender<Destroy>,
     rx: mpsc::Receiver<Destroy>,
+    destroy: DestroyQueue,
     viewport_size: Cell<PhysicalSize<u32>>,
     /// Inner OpenGL context has inner mutability, and is not thread safe.
     _invariant: Invariant,
@@ -137,6 +144,7 @@ impl GraphicDevice {
             extensions,
             tx,
             rx,
+            destroy: Default::default(),
             viewport_size: Cell::new(PhysicalSize::new(640, 480)),
             _invariant: Default::default(),
         }
@@ -199,9 +207,14 @@ impl GraphicDevice {
         self.tx.clone()
     }
 
+    #[inline]
+    pub(crate) fn destroy_queue(&self) -> DestroyQueue {
+        self.destroy.clone()
+    }
+
     /// Release graphics resources.
     pub fn maintain(&self) {
-        while let Ok(resource) = self.rx.try_recv() {
+        for resource in self.destroy.0.borrow_mut().drain(..) {
             match resource {
                 Destroy::Texture(handle) => unsafe {
                     println!("destroying texture");
@@ -228,10 +241,20 @@ impl Drop for GraphicDevice {
 
 /// Message sent from dropped resource handles, instructing
 /// device context to release the underlying resource.
+#[derive(Debug)]
 pub(crate) enum Destroy {
     Texture(u32),
     Shader(u32),
     VertexArray(u32),
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct DestroyQueue(Rc<RefCell<Vec<Destroy>>>);
+
+impl DestroyQueue {
+    pub(crate) fn send(&self, destroy_msg: Destroy) {
+        self.0.borrow_mut().push(destroy_msg);
+    }
 }
 
 /// Hardware information supplied by the graphics device.

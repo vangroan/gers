@@ -2,7 +2,7 @@
 use crate::{
     gl_result,
     graphics::{
-        device::GraphicDevice,
+        device::{Destroy, DestroyQueue, GraphicDevice},
         errors::{debug_assert_gl, GfxError, GfxResult},
         rect::Rect,
     },
@@ -25,6 +25,8 @@ pub struct Texture {
     ///
     /// Must be equal or smaller than `orig_size`.
     rect: Rect<u32>,
+    /// Queue for releasing the resource handle on drop.
+    destroy: DestroyQueue,
     /// Internal handle belongs to OpenGL context.
     _invariant: Invariant,
 }
@@ -107,6 +109,7 @@ impl Texture {
                 texture: handle,
                 orig_size: [width, height],
                 rect,
+                destroy: device.destroy_queue(),
                 _invariant: Default::default(),
             })
         }
@@ -140,12 +143,15 @@ impl Texture {
         // We can probably get away without checking power-of-two since we're not
         // allocating video memory.
 
-        Ok(Self {
-            texture: self.texture,
-            orig_size: self.orig_size,
-            rect: target_rect,
-            _invariant: Default::default(),
-        })
+        // Ok(Self {
+        //     texture: self.texture,
+        //     orig_size: self.orig_size,
+        //     rect: target_rect,
+        //     destroy: self.destroy_queue(),
+        //     _invariant: Default::default(),
+        // });
+
+        todo!("Decide what to do about sub textures and sharing the handle")
     }
 
     fn validate_size(width: u32, height: u32) -> GfxResult<()> {
@@ -242,6 +248,7 @@ impl Texture {
 impl Drop for Texture {
     fn drop(&mut self) {
         // self.destroy.send(Destroy::Texture(self.handle)).unwrap();
+        self.destroy.send(Destroy::Texture(self.texture));
     }
 }
 

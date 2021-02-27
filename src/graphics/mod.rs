@@ -3,6 +3,7 @@ mod colour;
 mod device;
 mod errors;
 mod rect;
+mod shader;
 mod sprite;
 mod texture;
 mod transform;
@@ -16,6 +17,7 @@ pub use self::device::{
     bind_graphic_device, init_graphic_device, register_graphic_device, GraphicDevice, GraphicDeviceHooks, OpenGlInfo,
 };
 pub use self::errors::GfxError;
+pub use self::shader::{init_default_shaders, Shader};
 pub use self::texture::Texture;
 pub use self::vao::{UsageFrequency, UsageNature, VertexArrayObject};
 pub use self::vertex::Vertex;
@@ -28,6 +30,8 @@ pub fn register_graphics(vm: &mut WrenVm) -> WrenResult<()> {
     vm.interpret(GRAPHICS_MODULE, include_str!("vao.wren"))?;
     vm.interpret(GRAPHICS_MODULE, include_str!("vertex_array.wren"))?;
     vm.interpret(GRAPHICS_MODULE, include_str!("texture.wren"))?;
+    vm.interpret(GRAPHICS_MODULE, include_str!("shader.wren"))?;
+
     Ok(())
 }
 
@@ -36,4 +40,5 @@ pub fn bind_graphics(module: &mut ModuleBuilder) {
     module.register::<VertexArrayObject>();
     module.register::<VertexArray>();
     module.register::<Texture>();
+    module.register::<Shader>();
 }

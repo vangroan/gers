@@ -7,8 +7,8 @@ use self::collections::{bind_collections, register_collections, COLLECTIONS_MODU
 use self::errors::{log_wren_error, GersError};
 use self::game::{init_game, register_game, Game};
 use self::graphics::{
-    bind_graphic_device, bind_graphics, init_graphic_device, register_graphic_device, register_graphics, GraphicDevice,
-    GRAPHICS_MODULE,
+    bind_graphic_device, bind_graphics, init_default_shaders, init_graphic_device, register_graphic_device,
+    register_graphics, GraphicDevice, GRAPHICS_MODULE,
 };
 use self::window::{bind_window, register_window, WrenWindowConfig, WINDOW_MODULE};
 use glutin::{
@@ -17,7 +17,7 @@ use glutin::{
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
-    WrenResult,
+    WrenError, WrenResult,
 };
 use slog::Drain;
 use std::{env, fs, path::Path, process};
@@ -144,6 +144,10 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         };
 
         let init_result = vm.context_result(|ctx| {
+            // Compile built in shaders.
+            init_default_shaders(ctx, &device)?;
+
+            // Move graphics device into Wren VM.
             let graphic_device_hooks = init_graphic_device(ctx, device);
             init_game(ctx, logger.clone(), windowed_context, graphic_device_hooks)
         });
