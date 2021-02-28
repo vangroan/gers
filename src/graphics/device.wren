@@ -22,5 +22,6 @@ foreign class GraphicDevice {
   foreign clearScreen(red, green, blue, alpha)
   foreign draw(batch)
   foreign draw(batch, transform)
+  foreign draw(vao, texture, shader)
   foreign maintain()
 }

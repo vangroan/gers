@@ -9,8 +9,8 @@ use crate::{
     marker::Invariant,
 };
 use glow::HasContext;
-use rust_wren::{prelude::*, ForeignError, WrenResult};
-use std::{cell::RefCell, rc::Rc};
+use image::GenericImageView;
+use rust_wren::{prelude::*, ForeignError};
 
 /// Handle to a texture located in video memory.
 #[wren_class]
@@ -46,9 +46,29 @@ impl Texture {
     fn new(device: &WrenCell<GraphicDevice>, width: u32, height: u32) -> Result<Self, ForeignError> {
         Self::create(&*device.borrow(), width, height).map_err(|err| foreign_error!(err))
     }
+
+    #[method(name = fromFile)]
+    fn from_file(device: &WrenCell<GraphicDevice>, filepath: &str) -> Result<Self, ForeignError> {
+        let device = &*device.borrow();
+        let img = image::open(filepath).map_err(|err| foreign_error!(err))?;
+
+        log::info!("Loaded image: {}", filepath);
+        log::info!("  Dimensions: {:?}", img.dimensions());
+        log::info!("  Color Type: {:?}", img.color());
+
+        let img_rgba = img.to_rgba8();
+        let (width, height) = img.dimensions();
+        let mut texture = Self::create(device, width, height).map_err(|err| foreign_error!(err))?;
+        texture
+            .update_data(device, img_rgba.as_raw().as_slice())
+            .map_err(|err| foreign_error!(err))?;
+
+        Ok(texture)
+    }
 }
 
 impl Texture {
+    #[allow(clippy::collapsible_if)]
     pub fn create(device: &GraphicDevice, width: u32, height: u32) -> GfxResult<Self> {
         // Upfront validations.
         Self::validate_size(width, height)?;

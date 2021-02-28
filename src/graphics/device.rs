@@ -1,5 +1,7 @@
-use super::{errors::debug_assert_gl, GRAPHICS_MODULE};
-use crate::marker::Invariant;
+use crate::{
+    graphics::{errors::debug_assert_gl, shader::Shader, texture::Texture, vao::VertexArrayObject, GRAPHICS_MODULE},
+    marker::Invariant,
+};
 use glow::HasContext;
 use glutin::{dpi::PhysicalSize, PossiblyCurrent, WindowedContext};
 use rust_wren::{
@@ -12,7 +14,6 @@ use std::{
     collections::HashSet,
     fmt,
     rc::Rc,
-    sync::mpsc,
 };
 
 pub fn init_graphic_device(ctx: &mut WrenContext, device: GraphicDevice) -> GraphicDeviceHooks {
@@ -59,8 +60,6 @@ pub fn bind_graphic_device(module: &mut ModuleBuilder) {
 pub struct GraphicDevice {
     pub(crate) gl: glow::Context,
     extensions: HashSet<String>,
-    tx: mpsc::Sender<Destroy>,
-    rx: mpsc::Receiver<Destroy>,
     destroy: DestroyQueue,
     viewport_size: Cell<PhysicalSize<u32>>,
     /// Inner OpenGL context has inner mutability, and is not thread safe.
@@ -95,13 +94,63 @@ impl GraphicDevice {
     }
 
     #[method(name = draw)]
-    pub fn draw_1(&self, batch: f64) {
+    pub fn draw_1(&self, _batch: f64) {
         todo!()
     }
 
     #[method(name = draw)]
-    pub fn draw_2(&self, batch: f64, transform: f64) {
+    pub fn draw_2(&self, _batch: f64, _transform: f64) {
         todo!()
+    }
+
+    #[method(name = draw)]
+    pub fn draw_3(&self, vao: &WrenCell<VertexArrayObject>, tex: &WrenCell<Texture>, shader: &WrenCell<Shader>) {
+        let vao = &*vao.borrow();
+        let tex = &*tex.borrow();
+        let shader = &*shader.borrow();
+
+        // TODO: This drawing code may have to live in the render target.
+        let canvas_size = self.viewport_size.get();
+
+        unsafe {
+            let physical_size_i32 = canvas_size.cast::<i32>();
+
+            // Viewport tells OpenGL how to map normalised device coordinates
+            // to pixels for rasterisation.
+            self.gl
+                .viewport(0, 0, physical_size_i32.width, physical_size_i32.height);
+
+            self.gl.use_program(Some(shader.program));
+
+            // FIXME: Specific to the sprite shader.
+            //        Shader should be flexible enough
+            //        for uniforms to be specified
+            //        at runtime.
+            self.gl
+                .uniform_2_f32(Some(&0), canvas_size.width as f32, canvas_size.height as f32);
+        }
+
+        // Draw call
+        unsafe {
+            self.gl.bind_vertex_array(Some(vao.vao));
+
+            // TODO: Which textures, and how many, are bound
+            //       should be determined at runtime by
+            //       a material and pipeline.
+            self.gl.active_texture(glow::TEXTURE0);
+            self.gl.bind_texture(glow::TEXTURE_2D, Some(tex.raw_handle()));
+
+            // FIXME: Unsigned short is a detail of the vertex buffer, so drawing should probably happen there.
+            self.gl
+                .draw_elements(glow::TRIANGLES, vao.len() as i32, glow::UNSIGNED_SHORT, 0);
+            debug_assert_gl(&self.gl, ());
+        }
+
+        // Cleanup
+        unsafe {
+            self.gl.bind_vertex_array(None);
+            self.gl.use_program(None);
+        }
     }
 
     #[method(name = hasExtension)]
@@ -136,14 +185,10 @@ impl GraphicDevice {
             gl.disable(glow::CULL_FACE);
         }
 
-        // Dropped resources need to be deallocated via the OpenGL context.
-        let (tx, rx) = mpsc::channel();
-
         Self {
             gl,
             extensions,
-            tx,
-            rx,
+            // Dropped resources need to be deallocated via the OpenGL context.
             destroy: Default::default(),
             viewport_size: Cell::new(PhysicalSize::new(640, 480)),
             _invariant: Default::default(),
@@ -201,10 +246,6 @@ impl GraphicDevice {
                 renderer,
             }
         }
-    }
-
-    pub(crate) fn destroy_sender(&self) -> mpsc::Sender<Destroy> {
-        self.tx.clone()
     }
 
     #[inline]

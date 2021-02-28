@@ -1,11 +1,8 @@
 //! Shader program.
-use crate::{
-    errors::GersResult,
-    graphics::{
-        device::{Destroy, DestroyQueue, GraphicDevice},
-        errors::{GfxError, GfxResult},
-        GRAPHICS_MODULE,
-    },
+use crate::graphics::{
+    device::{Destroy, DestroyQueue, GraphicDevice},
+    errors::{GfxError, GfxResult},
+    GRAPHICS_MODULE,
 };
 use glow::HasContext;
 use rust_wren::{prelude::*, ForeignError, WrenContext, WrenError, WrenResult};

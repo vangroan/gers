@@ -1,6 +1,6 @@
 //! Statically typed arrays for Wren.
 use gers_codegen::impl_array;
-use rust_wren::{prelude::*, WrenContext, WrenResult};
+use rust_wren::{prelude::*, WrenContext};
 use std::{error::Error, fmt};
 
 impl_array!(U8, u8);

@@ -10,7 +10,6 @@ use glutin::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
     platform::run_return::EventLoopExtRunReturn,
-    window::Window,
     PossiblyCurrent, WindowedContext,
 };
 use rust_wren::{
@@ -138,7 +137,7 @@ impl Game {
         let mut result: Option<GersResult<()>> = None;
 
         // Prevent the result from being moved into the closure.
-        let mut result_ref = &mut result;
+        let result_ref = &mut result;
 
         // Event loop is a diverging function, it never returns.
         //
@@ -175,7 +174,7 @@ impl Game {
             }
         });
 
-        result.unwrap_or_else(|| Ok(()))
+        result.unwrap_or(Ok(()))
     }
 
     /// Dispatch single event.

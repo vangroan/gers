@@ -4,13 +4,13 @@ use crate::{
     gl_result,
     graphics::{
         device::{Destroy, DestroyQueue, GraphicDevice},
+        shader::Shader,
         utils, GfxError, Vertex, VertexArray,
     },
 };
 use glow::HasContext;
 use rust_wren::{prelude::*, ForeignError};
-use std::borrow::Borrow;
-use std::{mem, sync::mpsc::Sender};
+use std::mem;
 
 /// Handle to a vertex array object located in video memory.
 ///
@@ -18,9 +18,11 @@ use std::{mem, sync::mpsc::Sender};
 /// needs of the game engine.
 #[wren_class]
 pub struct VertexArrayObject {
-    vbo: u32,
+    pub(crate) vao: u32,
     vertex_buffer: u32,
     index_buffer: u32,
+    /// Maximum number of elements that can be drawn, ie. total index count.
+    size: usize,
     destroy: DestroyQueue,
 }
 
@@ -55,6 +57,8 @@ impl VertexArrayObject {
         )
         .map_err(|err| foreign_error!(err))
     }
+
+    pub fn draw(&self, device: &WrenCell<GraphicDevice>, shader: &WrenCell<Shader>) {}
 }
 
 impl VertexArrayObject {
@@ -141,9 +145,10 @@ impl VertexArrayObject {
             device.gl.bind_vertex_array(None);
 
             Ok(Self {
-                vbo: vertex_array,
+                vao: vertex_array,
                 vertex_buffer,
                 index_buffer,
+                size: indices.len(),
                 destroy: device.destroy_queue(),
             })
         }
@@ -166,11 +171,21 @@ impl VertexArrayObject {
             (F::Dynamic, N::Copy) => glow::DYNAMIC_COPY,
         }
     }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
+    }
 }
 
 impl Drop for VertexArrayObject {
     fn drop(&mut self) {
-        self.destroy.send(Destroy::VertexArray(self.vbo));
+        self.destroy.send(Destroy::VertexArray(self.vao));
     }
 }
 

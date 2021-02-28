@@ -1,7 +1,7 @@
 #version 410
 #extension GL_ARB_explicit_uniform_location : enable
 
-precision highp float;
+precision mediump float;
 
 layout(location = 1) uniform sampler2D u_Albedo;
 

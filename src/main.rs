@@ -5,22 +5,20 @@ extern crate slog_term;
 
 use self::collections::{bind_collections, register_collections, COLLECTIONS_MODULE};
 use self::errors::{log_wren_error, GersError};
-use self::game::{init_game, register_game, Game};
+use self::game::{init_game, register_game};
 use self::graphics::{
     bind_graphic_device, bind_graphics, init_default_shaders, init_graphic_device, register_graphic_device,
     register_graphics, GraphicDevice, GRAPHICS_MODULE,
 };
 use self::window::{bind_window, register_window, WrenWindowConfig, WINDOW_MODULE};
-use glutin::{
-    dpi::LogicalSize, event_loop::EventLoop, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest,
-};
+use glutin::{dpi::LogicalSize, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest};
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
     prelude::*,
-    WrenError, WrenResult,
+    WrenResult,
 };
 use slog::Drain;
-use std::{env, fs, path::Path, process};
+use std::{env, fs, path::Path};
 
 mod errors;
 mod game;

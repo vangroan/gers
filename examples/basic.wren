@@ -1,5 +1,5 @@
 import "game" for Game
-import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture
+import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture, Shader
 import "input" for Keyboard, Mouse
 import "collections" for U16Array, U8Array, I8Array
 
@@ -65,6 +65,7 @@ class MyGame is Game {
     // System.print("GraphicDevice %(_device)")
     _device.clearScreen(8, 16, 24, 255)
     // _device.clearScreen(128, 200, 255, 255)
+    _device.draw(__vao, __texture, Shader.default)
   }
 
   createVertexArray_() {
@@ -128,32 +129,33 @@ class MyGame is Game {
 
     vertex.setPos(0.0, 0.0)
     vertex.setUv(0.0, 0.0)
-    vertex.setColor(1.0, 0.0, 0.0, 1.0)
+    vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(1.0, 0.0)
+    vertex.setPos(100.0, 0.0)
     vertex.setUv(1.0, 0.0)
-    vertex.setColor(0.0, 1.0, 0.0, 1.0)
+    vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(1.0, 1.0)
+    vertex.setPos(100.0, 100.0)
     vertex.setUv(1.0, 1.0)
-    vertex.setColor(0.0, 0.0, 1.0, 1.0)
+    vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(0.0, 1.0)
+    vertex.setPos(0.0, 100.0)
     vertex.setUv(0.0, 1.0)
-    vertex.setColor(0.0, 1.0, 1.0, 1.0)
+    vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
     System.print("%(vertices.toString())")
 
     // Vertex Array Object
     System.print("GraphicDevice %(GraphicDevice.instance)")
-    var vao = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
+    __vao = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
 
     // Texture
-    var texture = Texture.new(GraphicDevice.instance, 512, 512)
+    // __texture = Texture.new(GraphicDevice.instance, 512, 512)
+    __texture = Texture.fromFile(GraphicDevice.instance, "examples/test_pattern.png")
   }
 }
 
