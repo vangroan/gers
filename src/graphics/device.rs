@@ -1,5 +1,8 @@
 use crate::{
-    graphics::{errors::debug_assert_gl, shader::Shader, texture::Texture, vao::VertexArrayObject, GRAPHICS_MODULE},
+    graphics::{
+        errors::debug_assert_gl, shader::Shader, texture::Texture, transform::Transform2D, vao::VertexArrayObject,
+        GRAPHICS_MODULE,
+    },
     marker::Invariant,
 };
 use glow::HasContext;
@@ -108,49 +111,23 @@ impl GraphicDevice {
         let vao = &*vao.borrow();
         let tex = &*tex.borrow();
         let shader = &*shader.borrow();
+        let transform = Transform2D::default();
+        self.draw_vertex_array_object(vao, tex, shader, &transform)
+    }
 
-        // TODO: This drawing code may have to live in the render target.
-        let canvas_size = self.viewport_size.get();
-
-        unsafe {
-            let physical_size_i32 = canvas_size.cast::<i32>();
-
-            // Viewport tells OpenGL how to map normalised device coordinates
-            // to pixels for rasterisation.
-            self.gl
-                .viewport(0, 0, physical_size_i32.width, physical_size_i32.height);
-
-            self.gl.use_program(Some(shader.program));
-
-            // FIXME: Specific to the sprite shader.
-            //        Shader should be flexible enough
-            //        for uniforms to be specified
-            //        at runtime.
-            self.gl
-                .uniform_2_f32(Some(&0), canvas_size.width as f32, canvas_size.height as f32);
-        }
-
-        // Draw call
-        unsafe {
-            self.gl.bind_vertex_array(Some(vao.vao));
-
-            // TODO: Which textures, and how many, are bound
-            //       should be determined at runtime by
-            //       a material and pipeline.
-            self.gl.active_texture(glow::TEXTURE0);
-            self.gl.bind_texture(glow::TEXTURE_2D, Some(tex.raw_handle()));
-
-            // FIXME: Unsigned short is a detail of the vertex buffer, so drawing should probably happen there.
-            self.gl
-                .draw_elements(glow::TRIANGLES, vao.len() as i32, glow::UNSIGNED_SHORT, 0);
-            debug_assert_gl(&self.gl, ());
-        }
-
-        // Cleanup
-        unsafe {
-            self.gl.bind_vertex_array(None);
-            self.gl.use_program(None);
-        }
+    #[method(name = draw)]
+    pub fn draw_4(
+        &self,
+        vao: &WrenCell<VertexArrayObject>,
+        tex: &WrenCell<Texture>,
+        shader: &WrenCell<Shader>,
+        trans: &WrenCell<Transform2D>,
+    ) {
+        let vao = &*vao.borrow();
+        let tex = &*tex.borrow();
+        let shader = &*shader.borrow();
+        let transform = &*trans.borrow();
+        self.draw_vertex_array_object(vao, tex, shader, transform)
     }
 
     #[method(name = hasExtension)]
@@ -228,6 +205,66 @@ impl GraphicDevice {
             self.gl.clear_color(color[0], color[1], color[2], color[3]);
             self.gl.clear(glow::COLOR_BUFFER_BIT);
             debug_assert_gl(&self.gl, ());
+        }
+    }
+
+    pub fn draw_vertex_array_object(
+        &self,
+        vao: &VertexArrayObject,
+        tex: &Texture,
+        shader: &Shader,
+        trans: &Transform2D,
+    ) {
+        // TODO: This drawing code may have to live in the render target.
+        let canvas_size = self.viewport_size.get();
+
+        unsafe {
+            let physical_size_i32 = canvas_size.cast::<i32>();
+
+            // Viewport tells OpenGL how to map normalised device coordinates
+            // to pixels for rasterisation.
+            self.gl
+                .viewport(0, 0, physical_size_i32.width, physical_size_i32.height);
+
+            self.gl.use_program(Some(shader.program));
+
+            // FIXME: Specific to the sprite shader.
+            //        Shader should be flexible enough
+            //        for uniforms to be specified
+            //        at runtime.
+            self.gl
+                .uniform_2_f32(Some(&0), canvas_size.width as f32, canvas_size.height as f32);
+
+            let matrix = trans.to_matrix4();
+            let matrix_data = matrix.as_slice();
+            self.gl.uniform_matrix_4_f32_slice(Some(&1), false, matrix_data);
+        }
+
+        // Draw call
+        unsafe {
+            self.gl.bind_vertex_array(Some(vao.vao));
+
+            // Map uniform sampler to texture unit.
+            // - First argument is the uniform's location in the shader.
+            // - Second argument is the texture unit eg. `TEXTURE0`
+            self.gl.uniform_1_i32(Some(&2), 0);
+
+            // TODO: Which textures, and how many, are bound
+            //       should be determined at runtime by
+            //       a material and pipeline.
+            self.gl.active_texture(glow::TEXTURE0);
+            self.gl.bind_texture(glow::TEXTURE_2D, Some(tex.raw_handle()));
+
+            // FIXME: Unsigned short is a detail of the vertex buffer, so drawing should probably happen there.
+            self.gl
+                .draw_elements(glow::TRIANGLES, vao.len() as i32, glow::UNSIGNED_SHORT, 0);
+            debug_assert_gl(&self.gl, ());
+        }
+
+        // Cleanup
+        unsafe {
+            self.gl.bind_vertex_array(None);
+            self.gl.use_program(None);
         }
     }
 

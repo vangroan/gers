@@ -19,6 +19,7 @@ pub use self::device::{
 pub use self::errors::GfxError;
 pub use self::shader::{init_default_shaders, Shader};
 pub use self::texture::Texture;
+pub use self::transform::Transform2D;
 pub use self::vao::{UsageFrequency, UsageNature, VertexArrayObject};
 pub use self::vertex::Vertex;
 pub use self::vertex_array::VertexArray;
@@ -26,6 +27,7 @@ pub use self::vertex_array::VertexArray;
 use rust_wren::{prelude::*, ModuleBuilder, WrenResult};
 
 pub fn register_graphics(vm: &mut WrenVm) -> WrenResult<()> {
+    vm.interpret(GRAPHICS_MODULE, include_str!("transform.wren"))?;
     vm.interpret(GRAPHICS_MODULE, include_str!("vertex.wren"))?;
     vm.interpret(GRAPHICS_MODULE, include_str!("vao.wren"))?;
     vm.interpret(GRAPHICS_MODULE, include_str!("vertex_array.wren"))?;
@@ -36,6 +38,7 @@ pub fn register_graphics(vm: &mut WrenVm) -> WrenResult<()> {
 }
 
 pub fn bind_graphics(module: &mut ModuleBuilder) {
+    module.register::<Transform2D>();
     module.register::<Vertex>();
     module.register::<VertexArrayObject>();
     module.register::<VertexArray>();

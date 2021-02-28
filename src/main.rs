@@ -131,6 +131,15 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let windowed_context = unsafe { windowed_context.make_current().unwrap() };
     let device = unsafe { GraphicDevice::from_windowed_context(&windowed_context) };
 
+    // Useful code for when the engine needs to expose fullscreen
+    // modes to scripts.
+    // if let Some(monitor) = windowed_context.window().current_monitor() {
+    //     info!(logger, "Current Monitor:");
+    //     for mode in monitor.video_modes() {
+    //         info!(logger, "  VideoMode: size={:?}, bit_depth={}, refresh_rate={}", mode.size(), mode.bit_depth(), mode.refresh_rate());
+    //     }
+    // };
+
     let mut game = {
         // In block so source is dropped when loading is done.
         // It's copied into Wren so no need to keep it in memory.

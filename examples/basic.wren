@@ -1,5 +1,5 @@
 import "game" for Game
-import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture, Shader
+import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture, Shader, Transform2D
 import "input" for Keyboard, Mouse
 import "collections" for U16Array, U8Array, I8Array
 
@@ -40,21 +40,32 @@ class MyGame is Game {
       _timer = 0.0
     }
 
+    var dt = Game.deltaTime
+    var speed = 100
+    var dx = 0.0
+    var dy = 0.0
+
     if (Keyboard.isKeyPressed("W")) {
       System.print("UP")
+      dy = dy - 1
     }
 
     if (Keyboard.isKeyPressed("S")) {
       System.print("DOWN")
+      dy = dy + 1
     }
 
     if (Keyboard.isKeyPressed("A")) {
       System.print("LEFT")
+      dx = dx - 1
     }
 
     if (Keyboard.isKeyPressed("D")) {
       System.print("RIGHT")
+      dx = dx + 1
     }
+
+    __transform.translate(dx * speed * dt, dy * speed * dt)
 
     if (Mouse.isButtonPressed("Left")) {
       System.print("MOUSE LEFT")
@@ -65,7 +76,7 @@ class MyGame is Game {
     // System.print("GraphicDevice %(_device)")
     _device.clearScreen(8, 16, 24, 255)
     // _device.clearScreen(128, 200, 255, 255)
-    _device.draw(__vao, __texture, Shader.default)
+    _device.draw(__vao, __texture, Shader.default, __transform)
   }
 
   createVertexArray_() {
@@ -156,6 +167,10 @@ class MyGame is Game {
     // Texture
     // __texture = Texture.new(GraphicDevice.instance, 512, 512)
     __texture = Texture.fromFile(GraphicDevice.instance, "examples/test_pattern.png")
+
+    // Transform
+    __transform = Transform2D.new()
+    __transform.setPos(10, 10)
   }
 }
 

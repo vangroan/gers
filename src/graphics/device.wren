@@ -23,5 +23,6 @@ foreign class GraphicDevice {
   foreign draw(batch)
   foreign draw(batch, transform)
   foreign draw(vao, texture, shader)
+  foreign draw(vao, texture, shader, transform)
   foreign maintain()
 }

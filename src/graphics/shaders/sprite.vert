@@ -13,6 +13,9 @@ layout(location = 2) in vec4 a_Color;
 // This could be a matrix too.
 layout(location = 0) uniform vec2 u_Resolution;
 
+// Model transform matrix.
+layout(location = 1) uniform mat4 u_Model;
+
 // Varyings are values sent from the vertex shader to
 // the fragment shader. The value that reaches the fragment
 // shader is interpolated between the vertices.
@@ -20,8 +23,11 @@ out vec4 v_Color;
 out vec2 v_TexCoord;
 
 void main() {
+    // Apply Transform2D.
+    vec4 pos4 = u_Model * vec4(a_Pos, 0.0, 1.0);
+
     // Convert the position from pixels to 0.0 to 1.0
-    vec2 normalised_pos = a_Pos / u_Resolution;
+    vec2 normalised_pos = pos4.xy / u_Resolution;
 
     // Convert from 0->1 to 0->2, since clip space is 2 wide and height.
     vec2 normalised_pos_2 = normalised_pos * 2;

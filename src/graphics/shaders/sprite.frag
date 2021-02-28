@@ -3,7 +3,7 @@
 
 precision mediump float;
 
-layout(location = 1) uniform sampler2D u_Albedo;
+layout(location = 2) uniform sampler2D u_Albedo;
 
 // Varyings
 in vec4 v_Color;
