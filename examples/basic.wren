@@ -46,26 +46,30 @@ class MyGame is Game {
     var dy = 0.0
 
     if (Keyboard.isKeyPressed("W")) {
-      System.print("UP")
       dy = dy - 1
     }
 
     if (Keyboard.isKeyPressed("S")) {
-      System.print("DOWN")
       dy = dy + 1
     }
 
     if (Keyboard.isKeyPressed("A")) {
-      System.print("LEFT")
       dx = dx - 1
     }
 
     if (Keyboard.isKeyPressed("D")) {
-      System.print("RIGHT")
       dx = dx + 1
     }
 
     __transform.translate(dx * speed * dt, dy * speed * dt)
+
+    if (Keyboard.isKeyPressed("E")) {
+      __transform.rotate(speed * dt)
+    }
+
+    if (Keyboard.isKeyPressed("Q")) {
+      __transform.rotate(-speed * dt)
+    }
 
     if (Mouse.isButtonPressed("Left")) {
       System.print("MOUSE LEFT")
@@ -171,6 +175,7 @@ class MyGame is Game {
     // Transform
     __transform = Transform2D.new()
     __transform.setPos(10, 10)
+    __transform.setOffset(50, 50)
   }
 }
 

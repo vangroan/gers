@@ -123,7 +123,7 @@ impl Game {
 
         // Frame rate throttle to prevent excessive CPU usage, battery drainage
         // and laptop fans freaking out.
-        let mut fps_throttle = FpsThrottle::new(144, FpsThrottlePolicy::Yield);
+        let mut fps_throttle = FpsThrottle::new(144, FpsThrottlePolicy::Off);
 
         // Frame rate metric.
         let mut fps_counter = FpsCounter::new();

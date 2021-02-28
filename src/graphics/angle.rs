@@ -17,7 +17,6 @@
 //! assert_eq!(PI * 2.0, add_pi(PI));
 //! assert_eq!(PI * 2.0, add_pi(Deg(180.)));
 //! ```
-
 use num_traits::cast::FromPrimitive;
 use num_traits::float::{Float, FloatConst};
 use std::fmt;
@@ -94,6 +93,11 @@ where
     #[inline]
     pub fn approx_eq<T: Into<Self>>(&self, rhs: T) -> bool {
         (self.0 - rhs.into().0).abs() < Float::epsilon()
+    }
+
+    #[inline]
+    pub fn sin_cos(&self) -> (N, N) {
+        self.0.sin_cos()
     }
 }
 
