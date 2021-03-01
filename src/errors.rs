@@ -53,7 +53,7 @@ pub fn log_wren_error(logger: &slog::Logger, err: &WrenError) {
             msg.push_str("Stack Trace:\n");
 
             let count = stack.len();
-            for (idx, frame) in stack.into_iter().enumerate() {
+            for (idx, frame) in stack.iter().enumerate() {
                 let WrenStackFrame {
                     module,
                     line,
