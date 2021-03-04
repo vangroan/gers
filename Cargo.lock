@@ -1897,34 +1897,36 @@ dependencies = [
 
 [[package]]
 name = "rust-wren"
-version = "0.12.0"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#d724bb38af3340c74b9b2d274b06b65891370cda"
+version = "0.12.2"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#583ef604414d1a77f4d03c9baf45133687da35e9"
 dependencies = [
  "backtrace",
  "bindgen",
+ "cc",
  "crossbeam",
+ "glob",
  "inventory",
  "lazy_static",
  "log",
  "regex",
- "rust_wren_derive",
+ "rust-wren-derive",
  "smol_str",
 ]
 
 [[package]]
-name = "rust_wren_derive"
+name = "rust-wren-derive"
 version = "0.6.1"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#d724bb38af3340c74b9b2d274b06b65891370cda"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#583ef604414d1a77f4d03c9baf45133687da35e9"
 dependencies = [
  "quote 1.0.7",
- "rust_wren_derive_backend",
+ "rust-wren-derive-backend",
  "syn",
 ]
 
 [[package]]
-name = "rust_wren_derive_backend"
+name = "rust-wren-derive-backend"
 version = "0.6.1"
-source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#d724bb38af3340c74b9b2d274b06b65891370cda"
+source = "git+https://gitlab.com/vangroan/rust-wren.git?branch=main#583ef604414d1a77f4d03c9baf45133687da35e9"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",

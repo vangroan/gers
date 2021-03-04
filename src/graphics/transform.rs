@@ -1,10 +1,11 @@
 //! TODO: WIP
 #![allow(dead_code)]
-use crate::graphics::angle::{Rad, Deg};
+use crate::graphics::angle::{Deg, Rad};
 use nalgebra::{Matrix4, Point2, Vector2};
 use rust_wren::prelude::*;
 
 #[wren_class]
+#[derive(Debug, Clone)]
 pub struct Transform2D {
     pub position: Point2<f32>,
     pub offset: Vector2<f32>,

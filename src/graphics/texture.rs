@@ -11,24 +11,27 @@ use crate::{
 use glow::HasContext;
 use image::GenericImageView;
 use rust_wren::{prelude::*, ForeignError};
+use std::{fmt, rc::Rc};
 
 /// Handle to a texture located in video memory.
 #[wren_class]
 pub struct Texture {
     /// Handle to texture allocated in video memory.
+    ///
+    /// This is the same valued as `TextureHandle`, inlined
+    /// into this struct to save on a pointer hop when
+    /// looking up the texture handle during rendering.
     texture: glow::Texture,
-    /// Total size in texels of the whole texture in video memory.
-    /// We need to keep this around for UVs coordinates calculations.
-    orig_size: [u32; 2],
     /// Sub-rectangle representing the view of this texture into
     /// the complete texture.
     ///
     /// Must be equal or smaller than `orig_size`.
     rect: Rect<u32>,
-    /// Queue for releasing the resource handle on drop.
-    destroy: DestroyQueue,
-    /// Internal handle belongs to OpenGL context.
-    _invariant: Invariant,
+    handle: Rc<TextureHandle>,
+    // Queue for releasing the resource handle on drop.
+    // destroy: DestroyQueue,
+    // Internal handle belongs to OpenGL context.
+    // _invariant: Invariant,
 }
 
 #[wren_methods]
@@ -125,12 +128,19 @@ impl Texture {
                 size: [width, height],
             };
 
-            Ok(Self {
-                texture: handle,
-                orig_size: [width, height],
-                rect,
+            let texture_handle = TextureHandle {
+                handle,
+                size: [width, height],
                 destroy: device.destroy_queue(),
                 _invariant: Default::default(),
+            };
+
+            Ok(Self {
+                texture: handle,
+                rect,
+                handle: Rc::new(texture_handle),
+                // destroy: device.destroy_queue(),
+                // _invariant: Default::default(),
             })
         }
     }
@@ -186,7 +196,7 @@ impl Texture {
     #[inline(always)]
     fn is_power_of_two(n: u32) -> bool {
         // This bitwise test does not work on the number zero.
-        n != 0 && ((n & n - 1) == 0)
+        n != 0 && ((n & (n - 1)) == 0)
     }
 
     /// Queries the device support for non-power-of-two-textures.
@@ -199,8 +209,14 @@ impl Texture {
         self.texture
     }
 
+    /// Reference counted handle.
+    #[inline(always)]
+    pub fn handle(&self) -> Rc<TextureHandle> {
+        self.handle.clone()
+    }
+
     pub fn update_data(&mut self, device: &GraphicDevice, data: &[u8]) -> GfxResult<()> {
-        let size = self.orig_size;
+        let size = self.handle.size();
         self.update_sub_data(device, [0, 0], size, data)
     }
 
@@ -260,15 +276,59 @@ impl Texture {
     pub fn data_len(&self) -> usize {
         // TODO: Does texture need an internal RefCell?
         // let size = self.handle.borrow().size;
+        let handle = self.handle.as_ref();
+
         // Each pixel is 4 bytes, RGBA
-        self.orig_size[0] as usize * self.orig_size[1] as usize * 4
+        handle.size[0] as usize * handle.size[1] as usize * 4
     }
 }
 
-impl Drop for Texture {
+// impl Drop for Texture {
+//     fn drop(&mut self) {
+//         // self.destroy.send(Destroy::Texture(self.handle)).unwrap();
+//         self.destroy.send(Destroy::Texture(self.texture));
+//     }
+// }
+
+pub struct TextureHandle {
+    /// Handle to texture allocated in video memory.
+    handle: glow::Texture,
+    /// Total size in texels of the whole texture in video memory.
+    /// We need to keep this around to calculate UVs using pixels
+    /// as units.
+    size: [u32; 2],
+    /// Queue for releasing the resource handle on drop.
+    destroy: DestroyQueue,
+    /// Internal handle belongs to OpenGL context, and the owned
+    /// memory effectively has interior mutability.
+    _invariant: Invariant,
+}
+
+impl TextureHandle {
+    #[inline(always)]
+    pub fn handle(&self) -> glow::Texture {
+        self.handle
+    }
+
+    #[inline(always)]
+    pub fn size(&self) -> [u32; 2] {
+        self.size
+    }
+}
+
+impl Drop for TextureHandle {
     fn drop(&mut self) {
         // self.destroy.send(Destroy::Texture(self.handle)).unwrap();
-        self.destroy.send(Destroy::Texture(self.texture));
+        self.destroy.send(Destroy::Texture(self.handle));
+    }
+}
+
+impl fmt::Debug for TextureHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("TextureHandle")
+            .field("handle", &self.handle)
+            .field("size", &self.size)
+            .finish()
     }
 }
 

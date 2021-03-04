@@ -17,6 +17,7 @@ use std::mem;
 /// Contains standard buffer attachments determined by the
 /// needs of the game engine.
 #[wren_class]
+#[derive(Debug)]
 pub struct VertexArrayObject {
     pub(crate) vao: u32,
     vertex_buffer: u32,
@@ -180,6 +181,16 @@ impl VertexArrayObject {
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.size == 0
+    }
+
+    #[inline(always)]
+    pub fn vertex_buf_handle(&self) -> glow::Buffer {
+        self.vertex_buffer
+    }
+
+    #[inline(always)]
+    pub fn index_buf_handle(&self) -> glow::Buffer {
+        self.vertex_buffer
     }
 }
 

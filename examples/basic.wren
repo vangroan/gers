@@ -1,5 +1,6 @@
 import "game" for Game
-import "graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex, Texture, Shader, Transform2D
+import "graphics" for GraphicDevice, VertexArrayObject, VertexArray,
+  Vertex, Texture, Shader, Transform2D, SpriteBatch, Sprite
 import "input" for Keyboard, Mouse
 import "collections" for U16Array, U8Array, I8Array
 
@@ -81,6 +82,12 @@ class MyGame is Game {
     _device.clearScreen(8, 16, 24, 255)
     // _device.clearScreen(128, 200, 255, 255)
     _device.draw(__vao, __texture, Shader.default, __transform)
+
+    for (sprite in __sprites) {
+      __batch.add(sprite)
+    }
+    
+    __batch.draw(GraphicDevice.instance, Shader.default, __batch_transform)
   }
 
   createVertexArray_() {
@@ -176,6 +183,27 @@ class MyGame is Game {
     __transform = Transform2D.new()
     __transform.setPos(10, 10)
     __transform.setOffset(50, 50)
+
+    // Sprite Batch
+    __batch = SpriteBatch.new(GraphicDevice.instance)
+
+    // Sprite
+    __batch_transform = Transform2D.new()
+    __batch_transform.setPos(110, 10)
+    __batch_transform.setOffset(0, 0)
+    __batch_transform.setScale(2, 2)
+    __batch_transform.rotate(0)
+
+    __sprites = []
+    for (i in 0...10) {
+      var sprite = Sprite.new()
+      sprite.x = i * 110
+      sprite.width = 100
+      sprite.height = 100
+      sprite.texture = __texture
+
+      __sprites.add(sprite)
+    }
   }
 }
 
