@@ -1,3 +1,5 @@
+#![allow(clippy::inherent_to_string)] // `to_string` is for Wren API.
+
 #[macro_use]
 extern crate slog;
 extern crate slog_async;
@@ -10,6 +12,8 @@ use self::graphics::{
     bind_graphic_device, bind_graphics, init_default_shaders, init_graphic_device, register_graphic_device,
     register_graphics, GraphicDevice, GRAPHICS_MODULE,
 };
+use self::math::{bind_math, register_math, MATH_MODULE};
+use self::noise::{bind_noise, register_noise, NOISE_MODULE};
 use self::window::{bind_window, register_window, WrenWindowConfig, WINDOW_MODULE};
 use glutin::{dpi::LogicalSize, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest};
 use rust_wren::{
@@ -27,13 +31,17 @@ mod graphics;
 mod collections;
 mod input;
 mod marker;
+mod math;
+mod noise;
 mod util;
 mod window;
 
 /// Register the builtin modules in the given Wren VM by interpreting
 /// the script contents.
 fn load_builtins(vm: &mut WrenVm) -> WrenResult<()> {
+    register_math(vm)?;
     register_collections(vm)?;
+    register_noise(vm)?;
     register_window(vm)?;
     vm.interpret("input", include_str!("input.wren"))?;
     register_graphics(vm)?;
@@ -58,6 +66,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Wren VM
     let wren_logger = root.new(o!("lang" => "Wren"));
     let mut vm = WrenBuilder::new()
+        .with_module(MATH_MODULE, bind_math)
         .with_module(WINDOW_MODULE, bind_window)
         .with_module(GRAPHICS_MODULE, |module| {
             bind_graphic_device(module);
@@ -66,6 +75,7 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         .with_module(COLLECTIONS_MODULE, |module| {
             bind_collections(module);
         })
+        .with_module(NOISE_MODULE, bind_noise)
         .with_write_fn(move |msg| {
             if msg != "\n" {
                 info!(wren_logger, "{}", msg)

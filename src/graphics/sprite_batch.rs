@@ -10,7 +10,7 @@ use crate::graphics::{
     vertex::Vertex,
 };
 use glow::HasContext;
-use nalgebra::{Point3};
+use nalgebra::Point3;
 use rust_wren::{prelude::*, ForeignError};
 use std::rc::Rc;
 
@@ -174,7 +174,7 @@ impl SpriteBatch {
                     // - First argument is the uniform's location in the shader.
                     // - Second argument is the texture unit eg. `TEXTURE0`
                     device.gl.uniform_1_i32(Some(&2), 0);
-                
+
                     // Texture slot determined by sprite shader.
                     device.gl.active_texture(glow::TEXTURE0);
                     device.gl.bind_texture(glow::TEXTURE_2D, Some(item.texture_raw));

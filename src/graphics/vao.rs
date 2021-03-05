@@ -59,7 +59,7 @@ impl VertexArrayObject {
         .map_err(|err| foreign_error!(err))
     }
 
-    pub fn draw(&self, device: &WrenCell<GraphicDevice>, shader: &WrenCell<Shader>) {}
+    pub fn draw(&self, _device: &WrenCell<GraphicDevice>, _shader: &WrenCell<Shader>) {}
 }
 
 impl VertexArrayObject {
