@@ -61,26 +61,6 @@ impl Transform2D {
 }
 
 impl Transform2D {
-    pub fn transform_vertex(&self, vertex: &Vector2<f32>) -> Vector2<f32> {
-        // Offset by anchor.
-        // Scaling and rotating happens around the origin shifted by the anchor.
-        let offset = vertex - self.offset;
-
-        // Apply scale.
-        let scaled = Vector2::new(offset.x * self.scale.x, offset.y * self.scale.y);
-
-        // TODO: Apply rotation.
-        let rotated = scaled;
-
-        // Return to before anchor.
-        let transformed = rotated + self.offset;
-
-        // Translate by position.
-        // transformed + self.position
-
-        todo!()
-    }
-
     /// Create a matrix from the transform suitable to
     /// be passed to a shader.
     ///
@@ -107,3 +87,6 @@ impl Transform2D {
         ])
     }
 }
+
+#[cfg(test)]
+mod test {}

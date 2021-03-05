@@ -75,6 +75,10 @@ class MyGame is Game {
     if (Mouse.isButtonPressed("Left")) {
       System.print("MOUSE LEFT")
     }
+
+    for (sprite in __sprites) {
+      sprite.transform.rotate(dt * 10.0)
+    }
   }
 
   draw() {
@@ -154,17 +158,17 @@ class MyGame is Game {
     vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(100.0, 0.0)
+    vertex.setPos(200.0, 0.0)
     vertex.setUv(1.0, 0.0)
     vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(100.0, 100.0)
+    vertex.setPos(200.0, 200.0)
     vertex.setUv(1.0, 1.0)
     vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
 
-    vertex.setPos(0.0, 100.0)
+    vertex.setPos(0.0, 200.0)
     vertex.setUv(0.0, 1.0)
     vertex.setColor(1.0, 1.0, 1.0, 1.0)
     vertices.add(vertex)
@@ -181,7 +185,7 @@ class MyGame is Game {
 
     // Transform
     __transform = Transform2D.new()
-    __transform.setPos(10, 10)
+    __transform.setPos(100, 100)
     __transform.setOffset(50, 50)
 
     // Sprite Batch
@@ -189,20 +193,24 @@ class MyGame is Game {
 
     // Sprite
     __batch_transform = Transform2D.new()
-    __batch_transform.setPos(110, 10)
-    __batch_transform.setOffset(0, 0)
-    __batch_transform.setScale(2, 2)
-    __batch_transform.rotate(0)
+    // __batch_transform.setPos(110, 10)
+    // __batch_transform.setOffset(0, 0)
+    // __batch_transform.setScale(2, 2)
+    // __batch_transform.rotate(0)
 
     __sprites = []
-    for (i in 0...10) {
-      var sprite = Sprite.new()
-      sprite.x = i * 110
-      sprite.width = 100
-      sprite.height = 100
-      sprite.texture = __texture
+    for (y in 0...2) {
+      for (x in 0...2) {
+        var sprite = Sprite.new()
+        sprite.width = 50
+        sprite.height = 50
+        sprite.texture = __texture
+        sprite.transform.rotate(0)
+        sprite.transform.setOffset(25, 25)
+        sprite.transform.setPos(10 + x * 100, 10 + y * 100)
 
-      __sprites.add(sprite)
+        __sprites.add(sprite)
+      }
     }
   }
 }

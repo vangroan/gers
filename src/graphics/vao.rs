@@ -190,7 +190,7 @@ impl VertexArrayObject {
 
     #[inline(always)]
     pub fn index_buf_handle(&self) -> glow::Buffer {
-        self.vertex_buffer
+        self.index_buffer
     }
 }
 

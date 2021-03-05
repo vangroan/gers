@@ -10,6 +10,7 @@ use crate::graphics::{
     vertex::Vertex,
 };
 use glow::HasContext;
+use nalgebra::{Point3};
 use rust_wren::{prelude::*, ForeignError};
 use std::rc::Rc;
 
@@ -136,6 +137,7 @@ impl SpriteBatch {
             let matrix_data = matrix.as_slice();
             // FIXME: Uniform location specific to the sprite shader.
             device.gl.uniform_matrix_4_f32_slice(Some(&1), false, matrix_data);
+            // device.gl.uniform_matrix_4_f32_slice(Some(&1), false, Transform2D::default().to_matrix4().as_slice());
 
             device.gl.bind_vertex_array(Some(self.vao.vao));
         }
@@ -168,6 +170,11 @@ impl SpriteBatch {
                 batch_count = 0;
                 last_texture = Some(item.texture_raw);
                 unsafe {
+                    // Map uniform sampler to texture unit.
+                    // - First argument is the uniform's location in the shader.
+                    // - Second argument is the texture unit eg. `TEXTURE0`
+                    device.gl.uniform_1_i32(Some(&2), 0);
+                
                     // Texture slot determined by sprite shader.
                     device.gl.active_texture(glow::TEXTURE0);
                     device.gl.bind_texture(glow::TEXTURE_2D, Some(item.texture_raw));
@@ -177,32 +184,73 @@ impl SpriteBatch {
             let BatchItem {
                 pos: [x, y],
                 size: [w, h],
+                transform,
                 ..
             } = item;
             // log::info!("{:?} {:?}", [x, y], [w, h]);
+            // println!("{:?}", transform);
+            let matrix = transform.to_matrix4();
 
             // Build vertices from sprite parameters.
             // TODO: scale UVs according to texture sub rectangle.
             vertices.push(Vertex {
-                position: [x, y],
+                position: matrix
+                    .transform_point(&Point3::new(x, y, 0.))
+                    .to_homogeneous()
+                    .xy()
+                    .into(),
                 uv: [0.0, 0.0],
                 color: [1.0, 1.0, 1.0, 1.0],
             });
             vertices.push(Vertex {
-                position: [x + w, y],
+                position: matrix
+                    .transform_point(&Point3::new(x + w, y, 0.))
+                    .to_homogeneous()
+                    .xy()
+                    .into(),
                 uv: [1.0, 0.0],
                 color: [1.0, 1.0, 1.0, 1.0],
             });
             vertices.push(Vertex {
-                position: [x + w, y + h],
+                position: matrix
+                    .transform_point(&Point3::new(x + w, y + h, 0.))
+                    .to_homogeneous()
+                    .xy()
+                    .into(),
                 uv: [1.0, 1.0],
                 color: [1.0, 1.0, 1.0, 1.0],
             });
             vertices.push(Vertex {
-                position: [x, y + h],
+                position: matrix
+                    .transform_point(&Point3::new(x, y + h, 0.))
+                    .to_homogeneous()
+                    .xy()
+                    .into(),
                 uv: [0.0, 1.0],
                 color: [1.0, 1.0, 1.0, 1.0],
             });
+
+            // vertices.push(Vertex {
+            //     position: [10. + x, 10. + y],
+            //     uv: [0.0, 0.0],
+            //     color: [1.0, 1.0, 1.0, 1.0],
+            // });
+            // vertices.push(Vertex {
+            //     position: [10. + x + w, 10. + y],
+            //     uv: [1.0, 0.0],
+            //     color: [1.0, 1.0, 1.0, 1.0],
+            // });
+            // vertices.push(Vertex {
+            //     position: [10. + x + w, 10. + y + h],
+            //     uv: [1.0, 1.0],
+            //     color: [1.0, 1.0, 1.0, 1.0],
+            // });
+            // vertices.push(Vertex {
+            //     position: [10. + x, 10. + y + h],
+            //     uv: [0.0, 1.0],
+            //     color: [1.0, 1.0, 1.0, 1.0],
+            // });
+
             // println!("{:?}", &vertices[vertices.len() - 4..vertices.len()]);
 
             let i = batch_count as u16 * 4;
@@ -239,6 +287,9 @@ impl SpriteBatch {
             // Nothing to draw
             return;
         }
+
+        // println!("{:?} {:?} {:?} {:?}", vertices[0].position, vertices[1].position, vertices[2].position, vertices[3].position);
+        // println!("{:?}", indices);
 
         debug_assert!(vertices.len() / 4 == indices.len() / 6);
 
