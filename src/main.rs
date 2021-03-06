@@ -22,7 +22,10 @@ use rust_wren::{
     WrenResult,
 };
 use slog::Drain;
-use std::{env, fs, path::Path};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 mod errors;
 mod game;
@@ -30,6 +33,7 @@ mod game;
 mod graphics;
 mod collections;
 mod input;
+mod io;
 mod marker;
 mod math;
 mod noise;
@@ -52,6 +56,13 @@ fn load_builtins(vm: &mut WrenVm) -> WrenResult<()> {
     Ok(())
 }
 
+fn app_root_dir() -> std::io::Result<PathBuf> {
+    let mut path_buf = std::env::current_exe()?;
+    // Remove executable file.
+    path_buf.pop();
+    Ok(path_buf)
+}
+
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     // Logging
     let decorator = slog_term::TermDecorator::new().build();
@@ -63,9 +74,14 @@ fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     let _scope_guard = slog_scope::set_global_logger(logger.clone());
     let _log_guard = slog_stdlog::init_with_level(log::Level::Debug).unwrap();
 
+    // Application root directory.
+    let app_root = app_root_dir()?;
+    info!(logger, "Executable directory: {}", app_root.to_string_lossy());
+
     // Wren VM
     let wren_logger = root.new(o!("lang" => "Wren"));
     let mut vm = WrenBuilder::new()
+        .with_module_loader(crate::io::WrenModuleLoader::from_root(app_root).with_root(std::env::current_dir()?))
         .with_module(MATH_MODULE, bind_math)
         .with_module(WINDOW_MODULE, bind_window)
         .with_module(GRAPHICS_MODULE, |module| {

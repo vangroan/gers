@@ -1,3 +1,4 @@
+import "examples.foobar" for Foobar
 import "game" for Game
 import "graphics" for GraphicDevice, VertexArrayObject, VertexArray,
   Vertex, Texture, Shader, Transform2D, SpriteBatch, Sprite

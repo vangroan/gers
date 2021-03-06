@@ -295,15 +295,15 @@ impl GraphicDevice {
         for resource in self.destroy.0.borrow_mut().drain(..) {
             match resource {
                 Destroy::Texture(handle) => unsafe {
-                    println!("destroying texture");
+                    log::debug!("destroying texture");
                     self.gl.delete_texture(handle);
                 },
                 Destroy::Shader(program) => unsafe {
-                    println!("destroying texture");
+                    log::debug!("destroying texture");
                     self.gl.delete_program(program);
                 },
                 Destroy::VertexArray(handle) => unsafe {
-                    println!("destroying texture");
+                    log::debug!("destroying texture");
                     self.gl.delete_vertex_array(handle);
                 },
             }
