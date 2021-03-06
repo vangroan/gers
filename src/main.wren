@@ -1,4 +1,4 @@
-import "window" for WindowConf
+import "gers.window" for WindowConf
 
 class Bootstrap {
   static window() {

@@ -13,7 +13,7 @@ mod vao;
 mod vertex;
 mod vertex_array;
 
-pub const GRAPHICS_MODULE: &str = "graphics";
+pub const GRAPHICS_MODULE: &str = "gers.graphics";
 pub use self::device::{
     bind_graphic_device, init_graphic_device, register_graphic_device, GraphicDevice, GraphicDeviceHooks, OpenGlInfo,
 };

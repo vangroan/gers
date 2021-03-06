@@ -56,15 +56,15 @@ pub fn init_game(
 
     // Mouse Input
     let mouse = Mouse {
-        set_pos: ctx.make_call_ref("input", "Mouse", "setPos_(_,_,_,_)")?.leak()?,
-        push_button: ctx.make_call_ref("input", "Mouse", "pushButton_(_,_)")?.leak()?,
+        set_pos: ctx.make_call_ref("gers.input", "Mouse", "setPos_(_,_,_,_)")?.leak()?,
+        push_button: ctx.make_call_ref("gers.input", "Mouse", "pushButton_(_,_)")?.leak()?,
     };
 
     // Keyboard Input
     let keyboard = Keyboard {
-        set_key_press: ctx.make_call_ref("input", "Keyboard", "setKeyPress_(_)")?.leak()?,
-        set_key_release: ctx.make_call_ref("input", "Keyboard", "setKeyRelease_(_)")?.leak()?,
-        push_char: ctx.make_call_ref("input", "Keyboard", "pushChar_(_)")?.leak()?,
+        set_key_press: ctx.make_call_ref("gers.input", "Keyboard", "setKeyPress_(_)")?.leak()?,
+        set_key_release: ctx.make_call_ref("gers.input", "Keyboard", "setKeyRelease_(_)")?.leak()?,
+        push_char: ctx.make_call_ref("gers.input", "Keyboard", "pushChar_(_)")?.leak()?,
     };
 
     Ok(Game {

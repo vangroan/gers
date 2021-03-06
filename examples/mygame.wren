@@ -1,7 +1,7 @@
 import "game" for Game
 import "graphics" for GraphicDevice
-import "input" for Keyboard, Mouse
-import "collections" for U16Array
+import "gers.input" for Keyboard, Mouse
+import "gers.collections" for U16Array
 
 class MyGame is Game {
   construct new() {

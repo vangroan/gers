@@ -1,8 +1,14 @@
-use rust_wren::{handle::WrenCallHandle, WrenContext, WrenResult};
+use rust_wren::{prelude::*, WrenResult, handle::WrenCallHandle, WrenContext};
 use winit::{
     dpi::{LogicalPosition, PhysicalPosition},
     event::{ElementState, MouseButton, VirtualKeyCode},
 };
+
+pub const INPUT_MODULE: &str = "gers.input";
+
+pub fn register_input(vm: &mut WrenVm) -> WrenResult<()> {
+    vm.interpret(INPUT_MODULE, include_str!("input.wren"))
+}
 
 pub struct Mouse {
     pub set_pos: WrenCallHandle,

@@ -1,6 +1,6 @@
 mod config;
 
-pub const WINDOW_MODULE: &str = "window";
+pub const WINDOW_MODULE: &str = "gers.window";
 pub use config::WrenWindowConfig;
 
 use rust_wren::{prelude::*, ModuleBuilder, WrenResult};

@@ -7,7 +7,7 @@ pub use self::script_array::{
 
 use rust_wren::{prelude::*, ModuleBuilder, WrenResult};
 
-pub const COLLECTIONS_MODULE: &str = "collections";
+pub const COLLECTIONS_MODULE: &str = "gers.collections";
 
 pub fn register_collections(vm: &mut WrenVm) -> WrenResult<()> {
     // vm.interpret(COLLECTIONS_MODULE, include_str!("script_array.wren"))?;

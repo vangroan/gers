@@ -1,5 +1,5 @@
-import "input" for Keyboard, Mouse
-import "window" for Signal
+import "gers.input" for Keyboard, Mouse
+import "gers.window" for Signal
 
 class Game {
   // Called by engine to get the entry point.

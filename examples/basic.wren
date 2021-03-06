@@ -1,9 +1,9 @@
 import "examples.foobar" for Foobar
 import "game" for Game
-import "graphics" for GraphicDevice, VertexArrayObject, VertexArray,
+import "gers.graphics" for GraphicDevice, VertexArrayObject, VertexArray,
   Vertex, Texture, Shader, Transform2D, SpriteBatch, Sprite
-import "input" for Keyboard, Mouse
-import "collections" for U16Array, U8Array, I8Array
+import "gers.input" for Keyboard, Mouse
+import "gers.collections" for U16Array, U8Array, I8Array
 
 class MyGame is Game {
   construct new() {

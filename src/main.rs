@@ -15,6 +15,7 @@ use self::graphics::{
 use self::math::{bind_math, register_math, MATH_MODULE};
 use self::noise::{bind_noise, register_noise, NOISE_MODULE};
 use self::window::{bind_window, register_window, WrenWindowConfig, WINDOW_MODULE};
+use self::input::{register_input};
 use glutin::{dpi::LogicalSize, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest};
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},
@@ -47,7 +48,7 @@ fn load_builtins(vm: &mut WrenVm) -> WrenResult<()> {
     register_collections(vm)?;
     register_noise(vm)?;
     register_window(vm)?;
-    vm.interpret("input", include_str!("input.wren"))?;
+    register_input(vm)?;
     register_graphics(vm)?;
     register_graphic_device(vm)?;
     vm.interpret("main", include_str!("main.wren"))?;
