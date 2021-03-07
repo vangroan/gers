@@ -63,7 +63,9 @@ pub fn init_game(
     // Keyboard Input
     let keyboard = Keyboard {
         set_key_press: ctx.make_call_ref("gers.input", "Keyboard", "setKeyPress_(_)")?.leak()?,
-        set_key_release: ctx.make_call_ref("gers.input", "Keyboard", "setKeyRelease_(_)")?.leak()?,
+        set_key_release: ctx
+            .make_call_ref("gers.input", "Keyboard", "setKeyRelease_(_)")?
+            .leak()?,
         push_char: ctx.make_call_ref("gers.input", "Keyboard", "pushChar_(_)")?.leak()?,
     };
 

@@ -68,6 +68,21 @@ impl Texture {
 
         Ok(texture)
     }
+
+    #[method(name = fromColor)]
+    fn from_color(device: &WrenCell<GraphicDevice>, r: f32, g: f32, b: f32, a: f32) -> Result<Self, ForeignError> {
+        let device = &*device.borrow();
+        let data = [
+            (r * 255.0) as u8,
+            (g * 255.0) as u8,
+            (b * 255.0) as u8,
+            (a * 255.0) as u8,
+        ];
+        let mut texture = Self::create(device, 1, 1).map_err(|err| foreign_error!(err))?;
+        texture.update_data(device, &data).map_err(|err| foreign_error!(err))?;
+
+        Ok(texture)
+    }
 }
 
 impl Texture {

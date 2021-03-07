@@ -12,10 +12,10 @@ use self::graphics::{
     bind_graphic_device, bind_graphics, init_default_shaders, init_graphic_device, register_graphic_device,
     register_graphics, GraphicDevice, GRAPHICS_MODULE,
 };
+use self::input::register_input;
 use self::math::{bind_math, register_math, MATH_MODULE};
 use self::noise::{bind_noise, register_noise, NOISE_MODULE};
 use self::window::{bind_window, register_window, WrenWindowConfig, WINDOW_MODULE};
-use self::input::{register_input};
 use glutin::{dpi::LogicalSize, window::WindowBuilder, Api, ContextBuilder, GlProfile, GlRequest};
 use rust_wren::{
     handle::{FnSymbolRef, WrenCallRef},

@@ -11,6 +11,13 @@ pub enum GfxError {
     /// were run.
     OpenGl(u32),
 
+    /// Error when creating a vertex-array-object with
+    /// indices that are out of bounds of the given vertices.
+    InvalidVertexArray {
+        index: usize,
+        vertex_count: usize,
+    },
+
     /// Texture size is not valid for the graphics hardware.
     InvalidTextureSize(u32, u32),
 
@@ -77,6 +84,11 @@ impl fmt::Display for GfxError {
                     _ => Ok(()),
                 }
             }
+            E::InvalidVertexArray { index, vertex_count } => write!(
+                f,
+                "Invalid vertex array object. Index {} is out of bounds for the given {} vertices.",
+                index, vertex_count
+            ),
             E::InvalidTextureSize(width, height) => write!(
                 f,
                 "Invalid texture size ({}, {}). Ensure that neither dimension is zero, and is power-of-two.",

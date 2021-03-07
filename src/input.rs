@@ -1,4 +1,4 @@
-use rust_wren::{prelude::*, WrenResult, handle::WrenCallHandle, WrenContext};
+use rust_wren::{handle::WrenCallHandle, prelude::*, WrenContext, WrenResult};
 use winit::{
     dpi::{LogicalPosition, PhysicalPosition},
     event::{ElementState, MouseButton, VirtualKeyCode},

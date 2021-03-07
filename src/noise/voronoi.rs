@@ -36,24 +36,50 @@ impl Voronoi2D {
     }
 
     #[method(name = makePolygons)]
-    pub fn make_polygons(&self) {
-        let _polygons = voronoi::make_polygons(&self.dcel);
+    pub fn make_polygons(&self) -> Polygons {
+        let polygons = voronoi::make_polygons(&self.dcel);
 
-        todo!()
+        Polygons(polygons)
     }
 }
 
 impl Voronoi2D {
     fn shift_conflicts(points: &mut [voronoi::Point]) {
-        let mut set = BTreeSet::<voronoi::Point>::new();
+        let mut set = BTreeSet::<i32>::new();
 
         for point in points {
-            while set.contains(&point) {
+            while set.contains(&(point.y() as i32)) {
+                log::warn!("Point conflict {:?}", point);
                 // Point coordinate conflict.
                 *point = voronoi::Point::new(point.x(), point.y() + 1.0);
             }
 
-            set.insert(*point);
+            set.insert(point.y() as i32);
         }
+    }
+}
+
+/// FIXME: Using a foreign class to wrap the
+///        polygons, because rust-wren doesn't
+///        support lists yet.
+#[wren_class]
+pub struct Polygons(Vec<Vec<voronoi::Point>>);
+
+#[wren_methods]
+impl Polygons {
+    #[construct]
+    fn new_() -> Self {
+        unimplemented!()
+    }
+
+    fn take(&mut self) -> Option<F64Array> {
+        self.0.pop().map(|points| {
+            let mut arr = F64Array::new();
+            for point in points {
+                arr.add(point.x());
+                arr.add(point.y());
+            }
+            arr
+        })
     }
 }

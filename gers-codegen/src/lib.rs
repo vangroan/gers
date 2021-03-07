@@ -147,6 +147,13 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
                     self.0.clear();
                 }
 
+                // TODO: Property getter
+                #[method(name = toString)]
+                #[inline]
+                pub fn to_string(&self) -> String {
+                    format!("{:?}", self.0)
+                }
+
                 #[inline]
                 pub fn iterate(&self, index: Option<i32>) -> ArrayIterator {
                     match index {
@@ -213,6 +220,8 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
                     foreign class {} is Sequence {{
                       construct new() {{}}
 
+                      [index] {{ get(index) }}
+
                       // TODO: Support subscript operator
                       foreign get(index)
                       foreign add(value)
@@ -220,7 +229,8 @@ pub fn impl_array(args: TokenStream) -> TokenStream {
                       foreign removeAt(index)
                       foreign clear()
                       // TODO: count
-                      // TODO: toString
+                      // TODO: property getter
+                      foreign toString()
                       foreign iterate(iterator)
                       foreign iteratorValue(iterator)
                     }}

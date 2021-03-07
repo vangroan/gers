@@ -3,9 +3,8 @@ use rust_wren::prelude::*;
 use smol_str::SmolStr;
 use std::{
     error::Error,
-    fmt, fs,
+    fmt, fs, iter,
     path::{Path, PathBuf},
-    iter,
 };
 
 pub struct WrenModuleLoader {
@@ -42,7 +41,7 @@ impl WrenModuleLoader {
     }
 
     /// An iterator of root paths.
-    pub fn iter_roots(&self) -> impl iter::Iterator<Item=&Path> {
+    pub fn iter_roots(&self) -> impl iter::Iterator<Item = &Path> {
         iter::once(self.root.as_path()).chain(self.rest.iter().map(|path_buf| path_buf.as_path()))
     }
 }
@@ -66,7 +65,7 @@ impl ModuleLoader for WrenModuleLoader {
 
             if path.is_file() {
                 return match fs::read_to_string(path) {
-                    Ok(source) => { Some(source) }
+                    Ok(source) => Some(source),
                     Err(err) => {
                         log::error!("Module load error: {}", err);
                         None
@@ -76,7 +75,7 @@ impl ModuleLoader for WrenModuleLoader {
                 log::trace!("Module path is not a file: {}", path.to_string_lossy());
             }
         }
-        
+
         log::warn!("Module not found: {}", mod_path);
         None
     }
@@ -203,7 +202,12 @@ impl fmt::Display for ModuleNameError {
 
         match self.kind {
             E::UnexpectedEOS => write!(f, "unexpected end of module path at '{}'", self.snippet),
-            E::ModuleNameMissing => write!(f, "module name expected at character {} '{}'", self.pos+1, self.snippet),
+            E::ModuleNameMissing => write!(
+                f,
+                "module name expected at character {} '{}'",
+                self.pos + 1,
+                self.snippet
+            ),
             E::Whitespace => write!(f, "whitespace not allowed in module path '{}'", self.snippet),
             E::InvalidCharacter => write!(f, "invalid character at '{}'", self.snippet),
         }

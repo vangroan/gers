@@ -77,6 +77,16 @@ impl VertexArrayObject {
         freq: UsageFrequency,
         nat: UsageNature,
     ) -> Result<Self, GfxError> {
+        // Validate vertices and indices.
+        for index in indices {
+            if *index as usize >= vertices.len() {
+                return Err(GfxError::InvalidVertexArray {
+                    index: *index as usize,
+                    vertex_count: vertices.len(),
+                });
+            }
+        }
+
         unsafe {
             // Vertex Buffer Object
             let vertex_array = device.gl.create_vertex_array().unwrap();
