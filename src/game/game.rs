@@ -298,9 +298,13 @@ impl Game {
                 Ok(())
             }
             E::RedrawRequested(_window_id) => {
-                vm.context(|ctx| {
-                    self.draw_handle.call::<_, ()>(ctx, ()).unwrap();
-                });
+                let draw_result = vm.context_result(|ctx| self.draw_handle.call::<_, ()>(ctx, ()));
+
+                if let Err(err) = draw_result {
+                    error!(self.logger, "Event loop redraw requested error");
+                    log_wren_error(&self.logger, &err);
+                    return Err(GersError::Wren(err));
+                };
 
                 // Display the drawn buffer in the window.
                 self.windowed_context.swap_buffers().unwrap();

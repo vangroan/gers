@@ -49,7 +49,7 @@ impl Voronoi2D {
 
         for point in points {
             while set.contains(&(point.y() as i32)) {
-                log::warn!("Point conflict {:?}", point);
+                // log::warn!("Point conflict {:?}", point);
                 // Point coordinate conflict.
                 *point = voronoi::Point::new(point.x(), point.y() + 1.0);
             }

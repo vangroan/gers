@@ -2,7 +2,7 @@ import "game" for Game
 import "gers.collections" for F64Array, U16Array
 import "gers.graphics" for GraphicDevice, VertexArrayObject, VertexArray, Vertex,
   Texture, Shader, Transform2D
-import "gers.noise" for Voronoi2D
+import "gers.noise" for Voronoi2D, PoissonDisc
 
 // Lessons Learned
 // - Rust needs to send Lists back to Wren
@@ -20,6 +20,10 @@ var Colors = [
   [0.0, 0.0, 0.0, 1.0], // black
 ]
 
+var Size = 500
+var Scale = 1
+var MinPointDistance = 50
+
 
 class MapGen is Game {
   construct new() {
@@ -28,7 +32,37 @@ class MapGen is Game {
 
   init() {
     __transform = Transform2D.new()
+    __transform.setScale(Scale, Scale)
 
+    // var points = createPoints()
+    var points = PoissonDisc.new(0, MinPointDistance, Size, Size).generate()
+    createDebugPoints(points)
+
+    _voronoi = Voronoi2D.new(points, Size)
+    _polygons = []
+
+    // rust-wren can't return lists yet, so we have to copy
+    // our polygons out of a foreign class.
+    var polygons = _voronoi.makePolygons()
+
+    var polygon = null
+    while (polygon = polygons.take()) {
+      // System.print("Popped polygon: %(polygon) %(polygon.count)")
+      _polygons.add(polygon)
+    }
+
+    createVAO()
+  }
+
+  draw() {
+    var device = GraphicDevice.instance
+    device.clearScreen(100, 149, 237, 255)
+
+    device.draw(_vao, _tex, Shader.default, __transform)
+    device.draw(_pointsVAO, _pointsTex, Shader.default, __transform)
+  }
+
+  createPoints() {
     var points = F64Array.new()
     points.add(30)
     points.add(50)
@@ -45,27 +79,7 @@ class MapGen is Game {
     points.add(200)
     points.add(150)
 
-    _voronoi = Voronoi2D.new(points, 500)
-    _polygons = []
-
-    // rust-wren can't return lists yet, so we have to copy
-    // our polygons out of a foreign class.
-    var polygons = _voronoi.makePolygons()
-
-    var polygon = null
-    while (polygon = polygons.take()) {
-      System.print("Popped polygon: %(polygon) %(polygon.count)")
-      _polygons.add(polygon)
-    }
-
-    createVAO()
-  }
-
-  draw() {
-    var device = GraphicDevice.instance
-    device.clearScreen(100, 149, 237, 255)
-
-    device.draw(_vao, _tex, Shader.default, __transform)
+    return points
   }
 
   createVAO() {
@@ -81,8 +95,8 @@ class MapGen is Game {
       var vertexCount = count / 2
       var vertex = Vertex.new()
 
-      System.print("Component count: %(count)")
-      System.print("Vertex count: %(vertexCount)")
+      // System.print("Component count: %(count)")
+      // System.print("Vertex count: %(vertexCount)")
 
       if (count >= 3) {
         var color = Colors[polyNum % Colors.count]
@@ -109,14 +123,54 @@ class MapGen is Game {
 
         polyNum = polyNum + 1
         polyOffset = polyOffset + vertexCount
-        System.print("polyOffset %(polyOffset)")
+        // System.print("polyOffset %(polyOffset)")
       }
     }
 
-    System.print("Indices: %(indices.toString())")
+    // System.print("Indices: %(indices.toString())")
 
     _vao = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
     _tex = Texture.fromColor(GraphicDevice.instance, 1, 1, 1, 1)
+  }
+
+  createDebugPoints(points) {
+    System.print("createDebugPoints")
+
+    var vertices = VertexArray.new()
+    var indices = U16Array.new()
+    var vertex = Vertex.new()
+    var size = 5
+
+    for (i in 0...(points.count / 2)) {
+      var x = points[2*i]
+      var y = points[2*i+1]
+      // System.print("Point %(i) (%(x), %(y))")
+
+      vertex.setUv(0, 0)
+      vertex.setColor(0.0, 0.0, 1.0, 1.0)
+
+      vertex.setPos(x, y)
+      vertices.add(vertex)
+
+      vertex.setPos(x+size, y)
+      vertices.add(vertex)
+
+      vertex.setPos(x+size, y+size)
+      vertices.add(vertex)
+
+      vertex.setPos(x, y+size)
+      vertices.add(vertex)
+
+      indices.add(4*i)
+      indices.add(4*i+1)
+      indices.add(4*i+2)
+      indices.add(4*i)
+      indices.add(4*i+2)
+      indices.add(4*i+3)
+    }
+
+    _pointsVAO = VertexArrayObject.new(GraphicDevice.instance, vertices, indices)
+    _pointsTex = Texture.fromColor(GraphicDevice.instance, 1, 1, 1, 1)
   }
 }
 
