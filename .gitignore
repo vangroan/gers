@@ -1,4 +1,10 @@
+# Rust
+/target
 
-# VirtualEnv
+# Project files and directories
+.idea/
+.vs/
 
-venv/
+# Binary files
+*.exe
+*.pdb
