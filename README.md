@@ -1,5 +1,10 @@
+⚠️ Abandoned ⚠️
 
-# Develop
+# gers
+
+Experimental attempt at Rust+Python+SFML.
+
+## Develop
 
 Start by creating a Python 3.7 virtual environment.
 
