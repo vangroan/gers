@@ -1,0 +1,3 @@
+# Library does not lock dependencies. Determined by dependant.
+Cargo.lock
+

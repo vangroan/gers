@@ -1,0 +1,58 @@
+[package]
+name = "gers"
+version = "0.1.0"
+authors = ["Willem Victor <wimpievictor@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+# Increases runtime performance because
+# LLVM has more oppertunities to inline functions.
+#
+# Slows down compilation.
+codegen-units = 1
+lto = "fat"
+# Include debug symbols.
+debug = true
+
+[dependencies]
+arrayvec = "0.5"
+lazy_static = "1.4"
+legion = { version = "0.3", default-features = false }
+log = "0.4"
+image = "0.23"
+memoffset = "0.6"
+nalgebra = "0.24"
+noise = "0.7"
+num-traits = "0.2"
+rand = "0.8"
+rand_xorshift = "0.3"
+serde = "1.0"
+serde_json = "1.0"
+slog = { version = "2.7", features = ["max_level_trace", "release_max_level_warn"] }
+slog-async = "2.5"
+slog-scope = "4.3"
+slog-stdlog = "4.1"
+slog-term = "2.6"
+smol_str = "0.1"
+voronoi = "0.1"
+winit = { version = "0.24", features = ["serde"] }
+
+[dependencies.glutin]
+version = "0.26"
+features = ["serde"]
+
+[dependencies.glow]
+version = "0.7"
+features = ["glutin"]
+
+[dependencies.rust-wren]
+version = "*"
+git = "https://gitlab.com/vangroan/rust-wren.git"
+branch = "main"
+
+[dependencies.gers-codegen]
+version = "*"
+path = "./gers-codegen"
+
