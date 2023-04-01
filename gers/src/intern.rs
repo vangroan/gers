@@ -12,6 +12,15 @@ use std::{
 #[derive(Debug, Clone, Hash)]
 pub struct InternStr(Rc<str>);
 
+impl InternStr {
+    /// Collect garbage.
+    ///
+    /// Scans the global string table and drops strings that no longer have references.
+    pub fn gc() {
+        collect_garbage()
+    }
+}
+
 /// Internal functions for constructing an [`InterStr`]
 /// without inserting it into the
 impl InternStr {
@@ -124,6 +133,40 @@ fn get_or_insert_cow<'a>(string: impl Into<Cow<'a, str>>) -> InternStr {
     })
 }
 
+fn collect_garbage() {
+    INTERNED_STRINGS
+        .try_with(|ref_cell| {
+            if let Ok(mut table) = ref_cell.try_borrow_mut() {
+                // The table keeps strong references, so if only one Rc is left then
+                // no further references are live.
+                table.retain(|intern_str| Rc::strong_count(&intern_str.0) > 1)
+            }
+        })
+        .unwrap_or_default()
+}
+
+/// Score of the amount of unused garbage in the table.
+#[allow(dead_code)]
+fn garbage_score() -> f32 {
+    INTERNED_STRINGS
+        .try_with(|ref_cell| match ref_cell.try_borrow() {
+            Ok(table) => {
+                if table.is_empty() {
+                    0.0
+                } else {
+                    let count = table
+                        .iter()
+                        .filter(|intern_str| Rc::strong_count(&intern_str.0) == 1)
+                        .count();
+
+                    count as f32 / table.len() as f32
+                }
+            }
+            Err(_) => 0.0,
+        })
+        .unwrap_or(0.0)
+}
+
 // ----------------------------------------------------------------------------
 #[cfg(test)]
 mod test {
@@ -171,5 +214,18 @@ mod test {
         for (a, b) in foobar_intern.chars().zip(foobar.chars()) {
             assert_eq!(a, b);
         }
+    }
+
+    #[test]
+    fn test_garbage_collection() {
+        let _ = InternStr::from("a");
+        let _ = InternStr::from("b");
+        let _ = InternStr::from("c");
+        let _ = InternStr::from("d");
+
+        assert_eq!(garbage_score(), 1.0);
+
+        collect_garbage();
+        assert_eq!(garbage_score(), 0.0);
     }
 }

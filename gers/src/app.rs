@@ -8,7 +8,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::{errors::GersResultExt, input::InputMap, GersError};
+use crate::{errors::GersResultExt, input::InputMap, GersError, InternStr};
 
 pub struct App {
     /// Main window
@@ -181,6 +181,8 @@ impl App {
                 _ => { /* blank */ }
             }
         });
+
+        InternStr::gc();
 
         Ok(app_control)
     }
