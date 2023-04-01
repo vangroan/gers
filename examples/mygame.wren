@@ -1,12 +1,12 @@
 import "game" for Game
-import "graphics" for GraphicDevice
+import "gers.graphics" for GraphicDevice
 import "gers.input" for Keyboard, Mouse
 import "gers.collections" for U16Array
 
 class MyGame is Game {
   construct new() {
     // Note: Graphic Device is not ready here
-    super.setup(this)
+    super()
 
     _timer = 0.0
   }
@@ -42,4 +42,4 @@ class MyGame is Game {
   }
 }
 
-Game.run(MyGame.new())
+MyGame.new()
