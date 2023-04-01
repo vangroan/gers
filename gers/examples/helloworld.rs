@@ -6,7 +6,13 @@ fn main() {
         height: 768,
         title: "Hello, World!".into(),
     };
-    let mut app = App::new(&window_conf).expect("failed to build GERS application");
+    let mut app = match App::new(&window_conf) {
+        Ok(app) => app,
+        Err(err) => {
+            eprintln!("{err}");
+            std::process::exit(1);
+        }
+    };
 
     while let GersControl::Restart = app.run().expect("error during event loop") {
         // Recreate window and OpenGL context

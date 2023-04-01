@@ -8,7 +8,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::GersError;
+use crate::{errors::GersResultExt, GersError};
 
 pub struct App {
     /// Main window
@@ -68,7 +68,9 @@ impl App {
         // Event loop can only be created once per process.
         let event_loop = EventLoopBuilder::new().build();
 
-        let window = Self::create_main_window(window_conf, &event_loop)?;
+        let window = Self::create_main_window(window_conf, &event_loop)
+            .with_context(|| "creating the main window failed during application constructor")?;
+
         let app = App { window, event_loop };
 
         Ok(app)
@@ -77,7 +79,8 @@ impl App {
     /// Recreates the main window.
     pub fn recreate_window(&mut self, window_conf: &WindowConf) -> Result<(), GersError> {
         println!("recreating window");
-        self.window = Self::create_main_window(window_conf, &self.event_loop)?;
+        self.window = Self::create_main_window(window_conf, &self.event_loop)
+            .with_context(|| "attempt to recreate the main window failed")?;
         Ok(())
     }
 
