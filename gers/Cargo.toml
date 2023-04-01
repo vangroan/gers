@@ -6,3 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+# Logging
+log = "0.4"
+
+# Graphics
+
+# Windowing
+glutin = "0.30"
+winit = "0.28"
