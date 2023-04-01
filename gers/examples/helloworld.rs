@@ -1,4 +1,4 @@
-use gers::{App, GersControl, WindowConf};
+use gers::{prelude::*, App, GersControl, WindowConf};
 
 fn main() {
     let window_conf = WindowConf {
@@ -14,7 +14,10 @@ fn main() {
         }
     };
 
-    while let GersControl::Restart = app.run().expect("error during event loop") {
+    app.load_input_conf("gers/examples/inputmap.yaml")
+        .gers_expect("failed to load input map");
+
+    while let GersControl::Restart = app.run().gers_expect("error during event loop") {
         // Recreate window and OpenGL context
         app.recreate_window(&window_conf)
             .expect("failed to recreate main window");

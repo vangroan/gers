@@ -1,0 +1,13 @@
+# TODO: Group inputs into contexts: eg. mod_name, main_menu, overworld, play_map
+- name: restart
+  keyboard_keys:
+  - Escape
+
+- name: ping
+  mouse_buttons:
+  - Right
+
+- name: devconsole
+  debounce: 0.15
+  keyboard_keys:
+  - Grave

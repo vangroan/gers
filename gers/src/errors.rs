@@ -13,7 +13,26 @@ pub struct GersError {
 pub enum ErrorKind {
     /// Unspecified error occurred.
     Generic,
+    Io(std::io::Error),
     Window(winit::error::OsError),
+    Yaml(serde_yaml::Error),
+}
+
+impl GersError {
+    pub fn generic<S>(message: S) -> Self
+    where
+        S: Into<Cow<'static, str>>,
+    {
+        Self {
+            kind: ErrorKind::Generic,
+            message: Some(message.into()),
+            context: vec![],
+        }
+    }
+
+    pub fn add_context(&mut self, context: impl ToString) {
+        self.context.push(context.to_string());
+    }
 }
 
 pub trait GersResultExt {
@@ -26,6 +45,49 @@ pub trait GersResultExt {
     fn with_message<S>(self, message: S) -> Self
     where
         S: Into<Cow<'static, str>>;
+}
+
+impl<T> GersResultExt for Result<T, GersError> {
+    fn with_context<S>(self, context: impl FnOnce() -> S) -> Result<T, GersError>
+    where
+        S: ToString,
+    {
+        self.map_err(|mut err| {
+            err.add_context(context());
+            err
+        })
+    }
+
+    fn with_message<S>(self, message: S) -> Self
+    where
+        S: Into<Cow<'static, str>>,
+    {
+        self.map_err(|mut err| {
+            if let Some(previous) = err.message.replace(message.into()) {
+                log::warn!("replacing error message: {previous}");
+            }
+            err
+        })
+    }
+}
+
+pub trait GersExpectExt<T> {
+    fn gers_expect(self, msg: &'static str) -> T;
+}
+
+impl<T> GersExpectExt<T> for Result<T, GersError> {
+    fn gers_expect(self, msg: &'static str) -> T {
+        match self {
+            Ok(value) => value,
+            Err(err) => {
+                eprintln!("{err}");
+                match err.message {
+                    Some(message) => panic!("{msg}: {message}"),
+                    None => panic!("{msg}"),
+                }
+            }
+        }
+    }
 }
 
 impl fmt::Display for GersError {
@@ -58,50 +120,11 @@ impl fmt::Display for ErrorKind {
     #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Window(err) => write!(f, "{err}"),
             Self::Generic => write!(f, "unspecified error"),
+            Self::Io(err) => write!(f, "{err}"),
+            Self::Window(err) => write!(f, "{err}"),
+            Self::Yaml(err) => write!(f, "{err}"),
         }
-    }
-}
-
-impl GersError {
-    pub fn generic<S>(message: S) -> Self
-    where
-        S: Into<Cow<'static, str>>,
-    {
-        Self {
-            kind: ErrorKind::Generic,
-            message: Some(message.into()),
-            context: vec![],
-        }
-    }
-
-    pub fn add_context(&mut self, context: impl ToString) {
-        self.context.push(context.to_string());
-    }
-}
-
-impl<T> GersResultExt for Result<T, GersError> {
-    fn with_context<S>(self, context: impl FnOnce() -> S) -> Result<T, GersError>
-    where
-        S: ToString,
-    {
-        self.map_err(|mut err| {
-            err.add_context(context());
-            err
-        })
-    }
-
-    fn with_message<S>(self, message: S) -> Self
-    where
-        S: Into<Cow<'static, str>>,
-    {
-        self.map_err(|mut err| {
-            if let Some(previous) = err.message.replace(message.into()) {
-                log::warn!("replacing error message: {previous}");
-            }
-            err
-        })
     }
 }
 
@@ -110,6 +133,26 @@ impl From<winit::error::OsError> for GersError {
         Self {
             message: None,
             kind: ErrorKind::Window(err),
+            context: vec![],
+        }
+    }
+}
+
+impl From<std::io::Error> for GersError {
+    fn from(err: std::io::Error) -> Self {
+        Self {
+            message: None,
+            kind: ErrorKind::Io(err),
+            context: vec![],
+        }
+    }
+}
+
+impl From<serde_yaml::Error> for GersError {
+    fn from(err: serde_yaml::Error) -> Self {
+        Self {
+            message: None,
+            kind: ErrorKind::Yaml(err),
             context: vec![],
         }
     }

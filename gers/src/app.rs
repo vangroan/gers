@@ -8,13 +8,15 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::{errors::GersResultExt, GersError};
+use crate::{errors::GersResultExt, input::InputMap, GersError};
 
 pub struct App {
     /// Main window
     window: Window,
     /// Event loop target
     event_loop: EventLoop<()>,
+    /// Mapping of input events to application specified actions.
+    input_map: InputMap,
 }
 
 pub struct WindowConf {
@@ -71,7 +73,13 @@ impl App {
         let window = Self::create_main_window(window_conf, &event_loop)
             .with_context(|| "creating the main window failed during application constructor")?;
 
-        let app = App { window, event_loop };
+        let input_map = InputMap::new();
+
+        let app = App {
+            window,
+            event_loop,
+            input_map,
+        };
 
         Ok(app)
     }
@@ -97,25 +105,50 @@ impl App {
     pub fn init_graphics(&mut self) -> Result<(), GersError> {
         todo!()
     }
+
+    /// Load input mappings from the given file.
+    pub fn load_input_conf(&mut self, filepath: &str) -> Result<(), GersError> {
+        self.input_map.load_file(filepath)
+    }
 }
 
 /// Event loop runner
 impl App {
     #[allow(clippy::single_match)] // `if let` is less readable in this heavily nested event loop
     pub fn run(&mut self) -> Result<GersControl, GersError> {
-        use winit::event::{ElementState, Event as E, VirtualKeyCode as K, WindowEvent as WE};
+        use winit::event::{Event as E, WindowEvent as WE};
 
         // Main window ID
         let main_id = self.window.id();
 
         let mut app_control = GersControl::Shutdown;
+        let mut devconsole_open = false;
 
         self.event_loop.run_return(|event, _, control_flow| {
             control_flow.set_poll();
 
             match event {
+                E::NewEvents(_) => {
+                    // Frame start.
+                    self.input_map.clear_releases();
+                }
                 E::MainEventsCleared => {
                     // Application update code.
+
+                    if self.input_map.is_action_pressed("restart") {
+                        // println!("restart pressed");
+                    }
+
+                    if self.input_map.is_action_released("restart") {
+                        // println!("restart released");
+                        control_flow.set_exit();
+                        app_control.set_restart();
+                    }
+
+                    if self.input_map.is_action_released("devconsole") {
+                        devconsole_open = !devconsole_open;
+                        println!("Dev Console: {devconsole_open}");
+                    }
 
                     // Queue a RedrawRequested event.
                     //
@@ -134,14 +167,8 @@ impl App {
                 E::WindowEvent { window_id, event } if window_id == main_id => {
                     match event {
                         WE::KeyboardInput { input, .. } => {
-                            if input.state == ElementState::Released {
-                                match input.virtual_keycode {
-                                    Some(K::Escape) => {
-                                        control_flow.set_exit();
-                                        app_control.set_restart();
-                                    }
-                                    _ => { /* blank */ }
-                                }
+                            if let Some(keycode) = input.virtual_keycode {
+                                self.input_map.set_key_state(keycode, input.state);
                             }
                         }
                         WE::CloseRequested => {
