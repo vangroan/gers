@@ -8,11 +8,88 @@ use std::{
     rc::Rc,
 };
 
-/// An immutable interned string.
+// ----------------------------------------------------------------------------
+/// An interned string.
+///
+/// ```
+/// # use gers::InternStr;
+/// // Create from &str or String
+/// let a = InternStr::from("a");
+/// let b = InternStr::from(String::from("b"));
+///
+/// // Two interned strings with the same contents are considered equal
+/// // and point to the same memory.
+/// let a2 = InternStr::from("a");
+/// assert_eq!(a, a2);
+/// assert!(a.ptr_eq(&a2));
+/// ```
+///
+/// An interned string is a string value that is stored only once in memory in a
+/// global string intern table. It reduces memory usage when the same string is
+/// used multiple times, and improves performance for string comparisons.
+///
+/// In order for a string to be interned, it must be immutable. It is identified
+/// in the intern table by its hash.
+///
+/// The `InternStr` struct is implemented as a thin wrapper around `Rc<str>`,
+/// which allows it to behave like a normal `&str` in most cases. It can be
+/// created from a `String` or a `&str` using the `from()` functions.
+///
+/// Interning strings comes with memory overhead, as the interned strings must be
+/// stored in a global table to be shared accross the program. Therefore, it is
+/// recommended to use `InternStr` sparingly and only when it is expected to
+/// provide a significant benefit over regular strings.
+///
+/// ## Threading
+///
+/// The intern table is global, but thread local. This avoids locking to improve
+/// performance in multithreaded environments, at the cost of more memory usage.
+/// To move an `InternStr` between threads, copy it to a new `String`.
+///
+/// ```
+/// # use gers::InternStr;
+/// use std::thread;
+///
+/// let foobar = InternStr::from("foobar");
+/// let message = foobar.to_string();
+///
+/// let t = thread::spawn(|| {
+///     let foobar = InternStr::from(message);
+///     println!("{foobar}");
+/// });
+/// # t.join().unwrap();
+/// ```
+///
+/// ## Nondistinct Instances
+///
+/// There are cases where inserting a string into the intern table may fail. If
+/// the table experiences an internal failure, a new `InternStr` instance will
+/// be created regardless. It will function normally, but will not be stored only
+/// once in memory.
+///
+/// ## Garbage Collection
+///
+/// The intern table holds an `Rc<str>` instance for every interned string.
+/// Therefore, it is necessary to manually execute a garbage collection pass to
+/// free up memory.
+///
+/// The [`InternStr::gc()`] function will scan the intern table for any `Rc<str>`
+/// instances that are not being used by any other part of the program and remove
+/// them from the table. This means that if you have an interned string that is
+/// still being used by another part of your program, it will not be removed from
+/// the table.
+///
+/// The normal `Rc` behaviour applies. The underlying `str` is deallocated once
+/// the strong reference count reaches 0.
 #[derive(Debug, Clone, Hash)]
 pub struct InternStr(Rc<str>);
 
 impl InternStr {
+    /// Returns `true` if the two `InternStr`s point to the same allocation.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+
     /// Collect garbage.
     ///
     /// Scans the global string table and drops strings that no longer have references.
