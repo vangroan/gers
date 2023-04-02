@@ -185,6 +185,23 @@ thread_local! {
     static INTERNED_STRINGS: RefCell<InternStrTable> = Default::default();
 }
 
+// FIXME: Interning table of weak references.
+//
+// The current solution requires periodic garbage collection calls which are
+// manually triggered. A better alternative would be keeping weak references
+// in the global table. That way the underlying string storage is deallocated
+// when the `Rc`s string referenec count reaches 0, and the table just needs
+// to be cleared of `Weak<T>`.
+//
+// The blockers to implementing this are:
+//
+// - `Weak<str>` doesn't implement `PartialEq<str>`, `Eq`, or `Hash`.
+//    It cannot be stored in `HashMap` or `HashSet`, and looked up using `&str`.
+// - `Weak<T>` effectively has inner mutability. If the strong reference count
+//   reaches 0 the underlying value is deallocated, and upgrading a `Weak` to
+//   `Rc` results in `None`. Modifying a key value like this is considered
+//   undefined behaviour.
+
 /// Get an existing string out of the global table, or insert it.
 ///
 /// A `Cow` is used so that &str can be used as a key to lookup an
