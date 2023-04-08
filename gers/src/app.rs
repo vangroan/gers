@@ -150,6 +150,16 @@ impl App {
                         println!("Dev Console: {devconsole_open}");
                     }
 
+                    // TODO: This is temporary. We need app layers to inject custom logic.
+                    const ACTIONS: &[&str] = &["move_up", "move_down", "move_left", "move_right"];
+                    for action in ACTIONS {
+                        if self.input_map.is_action_pressed(action) {
+                            println!("{action}: pressed");
+                        } else if self.input_map.is_action_released(action) {
+                            println!("{action}: released");
+                        }
+                    }
+
                     // Queue a RedrawRequested event.
                     //
                     // You only need to call this if you've determined that you need to redraw, in

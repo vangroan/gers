@@ -10,6 +10,7 @@ edition = "2021"
 # Serialization
 serde = "1.0"
 serde_yaml = "0.9"
+smol_str = "0.1"
 
 # Logging
 log = "0.4"

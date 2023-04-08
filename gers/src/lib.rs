@@ -6,6 +6,7 @@ mod intern;
 pub use self::{
     app::{App, GersControl, WindowConf},
     errors::GersError,
+    input::{ActionInfo, InputMap},
     intern::InternStr,
 };
 

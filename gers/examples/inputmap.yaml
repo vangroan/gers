@@ -8,6 +8,28 @@
   - Right
 
 - name: devconsole
-  debounce: 0.15
   keyboard_keys:
   - Grave
+
+# -----------------------------------------------------------------------------
+# Game
+
+- name: move_up
+  keyboard_keys:
+  - W
+  - Up
+
+- name: move_down
+  keyboard_keys:
+  - S
+  - Down
+
+- name: move_left
+  keyboard_keys:
+  - A
+  - Left
+
+- name: move_right
+  keyboard_keys:
+  - D
+  - Right

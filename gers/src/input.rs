@@ -1,28 +1,66 @@
 //! Input mapping
-use std::{borrow::Cow, collections::HashMap};
-
 use serde::Deserialize;
-use winit::event::{ElementState, MouseButton, VirtualKeyCode};
+use smol_str::SmolStr;
+
+// This module glues `winit` to the engine's input framework.
+pub use winit::event::{ElementState, MouseButton, VirtualKeyCode};
 
 use crate::{errors::GersResultExt, GersError};
 
+/// # Implementation
+///
+/// Actions potentially need to be looked up using multiple input.
+/// By keyboard key, mouse button, gamepad button, or name.
+///
+/// Lookup maps are stored in vectors to speed up iteration.
 pub struct InputMap {
-    actions: HashMap<String, ActionDef>,
+    actions2: Vec<ActionInfo>,
     state: InputState,
+    /// Mapping of virtual key codes to actions, by index.
+    keymap: Vec<(VirtualKeyCode, usize)>,
+    /// Mapping of mouse buttons to actions, by index.
+    mousemap: Vec<(MouseButton, usize)>,
+    namemap: Vec<(SmolStr, usize)>,
 }
 
 type InputMapDef = Vec<ActionDef>;
 
+pub struct ActionInfo {
+    pub name: SmolStr,
+    pub keyboard_keys: Vec<VirtualKeyCode>,
+    pub mouse_buttons: Vec<MouseButton>,
+}
+
+impl From<ActionDef> for ActionInfo {
+    fn from(def: ActionDef) -> Self {
+        Self {
+            name: def.name.into(),
+            keyboard_keys: def.keyboard_keys.unwrap_or_default(),
+            mouse_buttons: def.mouse_buttons.unwrap_or_default(),
+        }
+    }
+}
+
+/// Schema of action as it appears in a configuration file.
+///
+/// Mappings are optional for the sake of config ergonomics,
+/// but will be mapped to infallible fields when loaded into
+/// the input mapper.
 #[derive(Deserialize)]
 pub struct ActionDef {
     pub name: String,
     pub keyboard_keys: Option<Vec<VirtualKeyCode>>,
     pub mouse_buttons: Option<Vec<MouseButton>>,
-    pub debounce: Option<f32>,
+    // TODO: Input settings:
+    // - debounce
+    // - hold down or OS repeat
+    // - deadzone
+    // - axis
 }
 
 /// Action event instance.
-pub struct Action {}
+#[allow(dead_code)]
+pub struct InputEvent {}
 
 #[derive(Default)]
 struct InputState {
@@ -31,7 +69,7 @@ struct InputState {
 }
 
 struct KeyState {
-    action: String,
+    action: SmolStr,
     virtual_keycode: VirtualKeyCode,
     element_state: ElementState,
 }
@@ -39,8 +77,31 @@ struct KeyState {
 impl InputMap {
     pub fn new() -> Self {
         Self {
-            actions: HashMap::new(),
+            actions2: Vec::new(),
             state: InputState::default(),
+            keymap: Vec::new(),
+            mousemap: Vec::new(),
+            namemap: Vec::new(),
+        }
+    }
+
+    /// Rebuild the input mappings to actions, for when the actions have been changed.
+    fn rebuild_mappings(&mut self) {
+        // Start fresh
+        self.keymap.clear();
+        self.mousemap.clear();
+        self.namemap.clear();
+
+        for (index, action) in self.actions2.iter().enumerate() {
+            for key in action.keyboard_keys.iter().cloned() {
+                self.keymap.push((key, index));
+            }
+
+            for button in action.mouse_buttons.iter().cloned() {
+                self.mousemap.push((button, index));
+            }
+
+            self.namemap.push((action.name.clone(), index));
         }
     }
 
@@ -61,12 +122,15 @@ impl InputMap {
 
         let definitions: InputMapDef = serde_yaml::from_reader(file)?;
 
-        for action_def in definitions {
-            if action_def.debounce.is_some() {
-                println!("input key debounce not implemented yet");
-            }
-            self.actions.insert(action_def.name.clone(), action_def);
+        for def in definitions {
+            self.actions2.push(ActionInfo::from(def));
         }
+
+        // for action_def in definitions {
+        //     self.actions.insert(action_def.name.clone(), action_def);
+        // }
+
+        self.rebuild_mappings();
 
         Ok(())
     }
@@ -74,18 +138,19 @@ impl InputMap {
 
 /// State management.
 impl InputMap {
-    pub fn action_def(&self, name: &str) -> Option<&ActionDef> {
-        self.actions.get(name)
+    pub fn action_by_name(&self, name: &str) -> Option<&ActionInfo> {
+        self.namemap
+            .iter()
+            .find(|(n, _)| n == name)
+            .and_then(|(_, index)| self.actions2.get(*index))
     }
 
-    pub fn key_action(&self, keycode: VirtualKeyCode) -> Option<&ActionDef> {
-        self.actions.values().find(|action| {
-            if let Some(keys) = &action.keyboard_keys {
-                keys.iter().any(|key| *key == keycode)
-            } else {
-                false
-            }
-        })
+    /// Lookup an action by keyboard key.
+    pub fn action_by_key(&self, keycode: VirtualKeyCode) -> Option<&ActionInfo> {
+        self.keymap
+            .iter()
+            .find(|(k, _)| *k == keycode)
+            .and_then(|(_, index)| self.actions2.get(*index))
     }
 
     pub fn set_key_pressed(&mut self, keycode: VirtualKeyCode) {
@@ -103,7 +168,7 @@ impl InputMap {
                 keystate.element_state = state;
             }
             None => {
-                if let Some(action_def) = self.key_action(keycode) {
+                if let Some(action_def) = self.action_by_key(keycode) {
                     self.state.keys.push(KeyState {
                         action: action_def.name.clone(),
                         virtual_keycode: keycode,
@@ -116,11 +181,8 @@ impl InputMap {
 }
 
 impl InputMap {
-    pub fn is_action_pressed<'a, S>(&self, name: S) -> bool
-    where
-        S: Into<Cow<'a, str>>,
-    {
-        let lookup_key = name.into();
+    pub fn is_action_pressed(&self, name: impl AsRef<str>) -> bool {
+        let lookup_key = name.as_ref();
         self.state
             .keys
             .iter()
@@ -129,11 +191,8 @@ impl InputMap {
             .unwrap_or(false)
     }
 
-    pub fn is_action_released<'a, S>(&self, name: S) -> bool
-    where
-        S: Into<Cow<'a, str>>,
-    {
-        let lookup_key = name.into();
+    pub fn is_action_released(&self, name: impl AsRef<str>) -> bool {
+        let lookup_key = name.as_ref();
         self.state
             .keys
             .iter()
