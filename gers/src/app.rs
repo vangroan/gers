@@ -8,7 +8,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::{errors::GersResultExt, input::InputMap, GersError, InternStr};
+use crate::{app_layer::AppLayer, errors::GersResultExt, input::InputMap, GersError, InternStr, UpdateCtx};
 
 pub struct App {
     /// Main window
@@ -17,6 +17,7 @@ pub struct App {
     event_loop: EventLoop<()>,
     /// Mapping of input events to application specified actions.
     input_map: InputMap,
+    layer: Option<Box<dyn AppLayer>>,
 }
 
 pub struct WindowConf {
@@ -79,6 +80,7 @@ impl App {
             window,
             event_loop,
             input_map,
+            layer: None,
         };
 
         Ok(app)
@@ -110,6 +112,10 @@ impl App {
     pub fn load_input_conf(&mut self, filepath: &str) -> Result<(), GersError> {
         self.input_map.load_file(filepath)
     }
+
+    pub fn set_layer(&mut self, layer: impl AppLayer + 'static) {
+        self.layer = Some(Box::new(layer));
+    }
 }
 
 /// Event loop runner
@@ -118,11 +124,15 @@ impl App {
     pub fn run(&mut self) -> Result<GersControl, GersError> {
         use winit::event::{Event as E, WindowEvent as WE};
 
+        if self.layer.is_none() {
+            println!("warn: no app layer added");
+        }
+
         // Main window ID
         let main_id = self.window.id();
 
         let mut app_control = GersControl::Shutdown;
-        let mut devconsole_open = false;
+        // let mut devconsole_open = false;
 
         self.event_loop.run_return(|event, _, control_flow| {
             control_flow.set_poll();
@@ -145,19 +155,13 @@ impl App {
                         app_control.set_restart();
                     }
 
-                    if self.input_map.is_action_released("devconsole") {
-                        devconsole_open = !devconsole_open;
-                        println!("Dev Console: {devconsole_open}");
-                    }
+                    if let Some(layer) = &mut self.layer {
+                        let ctx = UpdateCtx {
+                            window: &mut self.window,
+                            input: &self.input_map,
+                        };
 
-                    // TODO: This is temporary. We need app layers to inject custom logic.
-                    const ACTIONS: &[&str] = &["move_up", "move_down", "move_left", "move_right"];
-                    for action in ACTIONS {
-                        if self.input_map.is_action_pressed(action) {
-                            println!("{action}: pressed");
-                        } else if self.input_map.is_action_released(action) {
-                            println!("{action}: released");
-                        }
+                        layer.update(ctx);
                     }
 
                     // Queue a RedrawRequested event.
