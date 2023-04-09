@@ -88,7 +88,7 @@ impl App {
 
     /// Recreates the main window.
     pub fn recreate_window(&mut self, window_conf: &WindowConf) -> Result<(), GersError> {
-        println!("recreating window");
+        log::info!("recreating window");
         self.window = Self::create_main_window(window_conf, &self.event_loop)
             .with_context(|| "attempt to recreate the main window failed")?;
         Ok(())
@@ -125,7 +125,7 @@ impl App {
         use winit::event::{Event as E, WindowEvent as WE};
 
         if self.layer.is_none() {
-            println!("warn: no app layer added");
+            log::warn!("warn: no app layer added");
         }
 
         // Main window ID
@@ -145,12 +145,8 @@ impl App {
                 E::MainEventsCleared => {
                     // Application update code.
 
-                    if self.input_map.is_action_pressed("restart") {
-                        // println!("restart pressed");
-                    }
-
                     if self.input_map.is_action_released("restart") {
-                        // println!("restart released");
+                        log::info!("restart released");
                         control_flow.set_exit();
                         app_control.set_restart();
                     }
@@ -186,7 +182,7 @@ impl App {
                             }
                         }
                         WE::CloseRequested => {
-                            println!("Close Requested");
+                            log::info!("Close Requested");
                             control_flow.set_exit();
                         }
                         _ => { /* blank */ }

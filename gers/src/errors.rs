@@ -80,7 +80,7 @@ impl<T> GersExpectExt<T> for Result<T, GersError> {
         match self {
             Ok(value) => value,
             Err(err) => {
-                eprintln!("{err}");
+                log::error!("{err}");
                 match err.message {
                     Some(message) => panic!("{msg}: {message}"),
                     None => panic!("{msg}"),

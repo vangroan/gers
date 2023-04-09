@@ -1,9 +1,20 @@
+#[macro_use]
+extern crate slog;
 use gers::{prelude::*, App, GersControl, WindowConf};
+use slog::Drain;
 
 const TITLE: &str = "Hello, World!";
 const TITLE_DEVCONSOLE: &str = "Hello, World! (Dev Console Open)";
 
 fn main() {
+    let decorator = slog_term::PlainDecorator::new(std::io::stdout());
+    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let logger = slog::Logger::root(drain, o!("version" => gers::version::VERSION));
+
+    let _scope_guard = slog_scope::set_global_logger(logger);
+    let _log_guard = slog_stdlog::init_with_level(log::Level::Trace).unwrap();
+
     let window_conf = WindowConf {
         width: 1024,
         height: 768,
@@ -12,7 +23,7 @@ fn main() {
     let mut app = match App::new(&window_conf) {
         Ok(app) => app,
         Err(err) => {
-            eprintln!("{err}");
+            log::error!("{err}");
             std::process::exit(1);
         }
     };
@@ -45,9 +56,9 @@ impl AppLayer for HelloWorld {
         const ACTIONS: &[&str] = &["move_up", "move_down", "move_left", "move_right"];
         for action in ACTIONS {
             if ctx.input.is_action_pressed(action) {
-                println!("{action}: pressed");
+                log::info!("{action}: pressed");
             } else if ctx.input.is_action_released(action) {
-                println!("{action}: released");
+                log::info!("{action}: released");
             }
         }
 
@@ -56,10 +67,10 @@ impl AppLayer for HelloWorld {
             self.devconsole = !self.devconsole;
 
             if self.devconsole {
-                println!("dev console open");
+                log::info!("dev console open");
                 ctx.window.set_title(TITLE_DEVCONSOLE);
             } else {
-                println!("dev console closed");
+                log::info!("dev console closed");
                 ctx.window.set_title(TITLE);
             }
         }
