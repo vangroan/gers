@@ -1,5 +1,6 @@
 mod app;
 mod app_layer;
+mod color;
 mod errors;
 mod gfx;
 mod input;

@@ -23,7 +23,10 @@ smol_str = "0.1"
 log = "0.4"
 
 # Graphics
+glow = "0.12"
 
 # Windowing
 glutin = "0.30"
+glutin-winit = "0.3"
+raw-window-handle = "0.5"
 winit = { version = "0.28", features = ["serde"] }

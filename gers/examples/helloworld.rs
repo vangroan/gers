@@ -6,6 +6,13 @@ use slog::Drain;
 const TITLE: &str = "Hello, World!";
 const TITLE_DEVCONSOLE: &str = "Hello, World! (Dev Console Open)";
 
+// [x] - Show Window
+// [x] - Load OpenGL functions
+// [ ] - Implement Renderer
+// [ ] - Draw triangle, as is tradition
+// [ ] - Implement GUI
+// [ ] - Implement developer console
+
 fn main() {
     let decorator = slog_term::PlainDecorator::new(std::io::stdout());
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
@@ -52,7 +59,6 @@ impl HelloWorld {
 
 impl AppLayer for HelloWorld {
     fn update(&mut self, ctx: gers::UpdateCtx) {
-        // TODO: This is temporary. We need app layers to inject custom logic.
         const ACTIONS: &[&str] = &["move_up", "move_down", "move_left", "move_right"];
         for action in ACTIONS {
             if ctx.input.is_action_pressed(action) {
