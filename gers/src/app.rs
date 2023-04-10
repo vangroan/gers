@@ -1,7 +1,5 @@
 //! Application wrapper
-use std::{borrow::Cow, ffi::CString, fmt, num::NonZeroU32};
-
-use glow::HasContext;
+use std::{borrow::Cow, fmt, num::NonZeroU32};
 
 use glutin::config::Config;
 use glutin::config::ConfigTemplateBuilder;
@@ -16,14 +14,17 @@ use winit::event_loop::{EventLoop, EventLoopBuilder};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::{Window, WindowBuilder};
 
-use crate::{app_layer::AppLayer, color::Color, input::InputMap, GersError, InternStr, UpdateCtx};
+use crate::app_layer::AppLayer;
+use crate::gfx::{opengl::OpenGLBackend, Render};
+use crate::{color::Color, input::InputMap, GersError, InternStr, UpdateCtx};
 
 pub struct App {
     /// Main window
     window: Window,
     main_context: PossiblyCurrentContext,
     surface: Surface<WindowSurface>,
-    gl: glow::Context,
+    // gl: glow::Context,
+    render: Render,
     // context: Box<dyn NotCurrentGlContext>,
     /// Event loop target
     event_loop: EventLoop<()>,
@@ -210,13 +211,11 @@ impl App {
             "context must be current to load OpenGL functions"
         );
 
-        // TODO: Create `Renderer` here
-        let gl = unsafe {
-            glow::Context::from_loader_function(|symbol| {
-                let cstring = CString::new(symbol).unwrap();
-                gl_display.get_proc_address(cstring.as_c_str()) as *const _
-            })
-        };
+        // Create the renderer for this window.
+        let backend = OpenGLBackend::new(&gl_display);
+        log::info!("{}", backend.info());
+
+        let render = Render::new(backend);
 
         // let window = Self::create_main_window(window_conf, &event_loop)
         //     .with_context(|| "creating the main window failed during application constructor")?;
@@ -227,7 +226,7 @@ impl App {
             window,
             main_context: gl_context,
             surface: gl_surface,
-            gl,
+            render,
             event_loop,
             input_map,
             layer: None,
@@ -278,7 +277,8 @@ impl App {
         let mut app_control = GersControl::Shutdown;
         // let mut devconsole_open = false;
 
-        let bkg_color = Color::from_rgba(29, 33, 40, 229).as_f32();
+        let bkg_color = Color::from_rgba(29, 33, 40, 229);
+        log::debug!("background color: {bkg_color}");
 
         self.event_loop.run_return(|event, _, control_flow| {
             control_flow.set_poll();
@@ -319,11 +319,7 @@ impl App {
                     // It's preferable for applications that do not render continuously to render in
                     // this event rather than in MainEventsCleared, since rendering in here allows
                     // the program to gracefully handle redraws requested by the OS.
-                    unsafe {
-                        let [r, g, b, a] = bkg_color;
-                        self.gl.clear_color(r, g, b, a);
-                        self.gl.clear(glow::COLOR_BUFFER_BIT);
-                    }
+                    self.render.clear_color(bkg_color);
 
                     self.surface.swap_buffers(&self.main_context).unwrap();
                 }

@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     r: u8,
     g: u8,
@@ -31,5 +32,15 @@ impl fmt::Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { r, g, b, a } = self;
         write!(f, "#{r:02X}{g:02X}{b:02X}{a:02X}")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_color_size() {
+        debug_assert_eq!(std::mem::size_of::<Color>(), std::mem::size_of::<u32>());
     }
 }
