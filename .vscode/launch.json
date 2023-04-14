@@ -7,35 +7,54 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'gers'",
+            "name": "Debug unit tests in library 'gers'",
             "cargo": {
                 "args": [
-                    "build",
-                    "--bin=gers",
+                    "test",
+                    "--no-run",
+                    "--lib",
                     "--package=gers"
                 ],
                 "filter": {
                     "name": "gers",
-                    "kind": "bin"
+                    "kind": "lib"
                 }
             },
-            "args": ["examples\\basic.wren"],
+            "args": [],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'gers'",
+            "name": "Debug example 'helloworld'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=helloworld",
+                    "--package=gers"
+                ],
+                "filter": {
+                    "name": "helloworld",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'helloworld'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=gers",
+                    "--example=helloworld",
                     "--package=gers"
                 ],
                 "filter": {
-                    "name": "gers",
-                    "kind": "bin"
+                    "name": "helloworld",
+                    "kind": "example"
                 }
             },
             "args": [],
